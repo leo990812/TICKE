@@ -1,3 +1,4 @@
+// server.js
 require("dotenv").config();
 const express = require("express");
 const path = require("path");
@@ -33,10 +34,32 @@ app.get("/api/servers/:id/info", (req, res) => {
 app.post("/api/servers/:id/settings", async (req, res) => {
     settingsDB[req.params.id] = req.body;
     const guild = client.guilds.cache.get(req.params.id);
+
     if (guild) {
         const channel = guild.channels.cache.get(req.body.ticketChannel);
         if (channel) {
             const { ActionRowBuilder, ButtonBuilder, ButtonStyle, roleMention, userMention } = require("discord.js");
+
             const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId("create_ticket").setLabel(req.body.buttonText || "🎫 開啟工單").setStyle(ButtonStyle.Primary)
-           
+                new ButtonBuilder()
+                    .setCustomId("create_ticket")
+                    .setLabel(req.body.buttonText || "🎫 開啟工單")
+                    .setStyle(ButtonStyle.Primary)
+            );
+
+            // 決定是否要 ping
+            const pingText = req.body.pingRole ? roleMention(req.body.notifyRole) : "";
+
+            await channel.send({
+                content: `${pingText}\n${req.body.messageContent || "**自創工單機器人**\n用途：提交建議、提出疑問"}\n⚠️ 若遇問題請聯繫 ${userMention(process.env.ADMIN_USER_ID)}`,
+                components: [row]
+            });
+        }
+    }
+
+    res.json({ success: true });
+});
+
+// 基本頁面
+app.get("/", (req, res) => res.send("Bot 控制面板在線"));
+app.listen(process.env.PORT || 3000, () => console.log("🌐 Web server started"));
