@@ -3,28 +3,78 @@
 <head>
 <meta charset="UTF-8">
 <title>工單控制面板</title>
+<style>
+    body {
+        font-family: 'Noto Sans TC', sans-serif;
+        background-color: #1e1e2f;
+        color: #f0f0f0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 40px;
+    }
+    h1 {
+        margin-bottom: 30px;
+        color: #ffcc00;
+    }
+    .panel-container {
+        background: #2c2c3e;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        width: 400px;
+    }
+    label {
+        display: block;
+        margin: 15px 0 5px;
+        font-weight: bold;
+    }
+    select, button {
+        width: 100%;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: none;
+        margin-bottom: 10px;
+        font-size: 14px;
+    }
+    select {
+        background-color: #1e1e2f;
+        color: #f0f0f0;
+    }
+    button {
+        background-color: #ffcc00;
+        color: #1e1e2f;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    button:hover {
+        background-color: #e6b800;
+    }
+    #status {
+        margin-top: 10px;
+        text-align: center;
+        font-weight: bold;
+    }
+</style>
 </head>
 <body>
 <h1>自創工單控制面板</h1>
 
 <button id="login-btn">登入 Discord</button>
 
-<div id="panel" style="display:none;">
+<div id="panel" class="panel-container" style="display:none;">
   <label>選擇伺服器:</label>
   <select id="guild-select"></select>
-  <br><br>
 
   <label>選擇工單頻道:</label>
   <select id="channel-select"></select>
-  <br><br>
 
   <label>通知角色:</label>
   <select id="notify-role-select"></select>
-  <br><br>
 
   <label>支援角色:</label>
   <select id="support-role-select"></select>
-  <br><br>
 
   <button id="save-btn">儲存設定</button>
   <div id="status"></div>
@@ -39,27 +89,33 @@ document.getElementById('login-btn').onclick = () => {
     window.location.href = url;
 };
 
-// 登入後解析 token
-window.onload = () => {
+window.onload = async () => {
     if (window.location.hash) {
         const params = new URLSearchParams(window.location.hash.substring(1));
         const token = params.get('access_token');
         if (token) {
-            fetch('https://discord.com/api/users/@me/guilds', { headers: { Authorization: `Bearer ${token}` } })
-            .then(res => res.json())
-            .then(guilds => {
+            document.getElementById('login-btn').style.display = 'none'; // 登入後隱藏按鈕
+            try {
+                const res = await fetch('https://discord.com/api/users/@me/guilds', { 
+                    headers: { Authorization: `Bearer ${token}` } 
+                });
+                const guilds = await res.json();
                 const select = document.getElementById('guild-select');
-                guilds.filter(g => g.permissions & 0x20) // 有管理權限
-                    .forEach(g => select.innerHTML += `<option value="${g.id}">${g.name}</option>`);
+                // 篩選有管理權限的伺服器
+                guilds.filter(g => g.permissions & 0x20)
+                      .forEach(g => select.innerHTML += `<option value="${g.id}">${g.name}</option>`);
                 document.getElementById('panel').style.display = 'block';
-            });
+            } catch (err) {
+                console.error('取得伺服器失敗', err);
+            }
         }
     }
 };
 
-// 當選擇伺服器後抓頻道與角色（需要後端 API 支援）
+// 選擇伺服器後抓頻道與角色
 document.getElementById('guild-select').onchange = async function() {
     const guildId = this.value;
+    if (!guildId) return;
     const res = await fetch(`/api/servers/${guildId}/info`);
     const data = await res.json();
 
@@ -96,4 +152,3 @@ document.getElementById('save-btn').onclick = async () => {
 </script>
 </body>
 </html>
-
