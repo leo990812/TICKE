@@ -22,27 +22,6 @@ const TICKET_CATEGORY_NAME = "🎫票口 Ticket";
 
 client.once("ready", () => {
     console.log(`✅ Bot 已登入 ${client.user.tag}`);
-
-    // 啟動時自動發送按鈕訊息（每個已設定的伺服器）
-    for (const guildId in settingsDB) {
-        const config = settingsDB[guildId];
-        const guild = client.guilds.cache.get(guildId);
-        if (!guild) continue;
-        const channel = guild.channels.cache.get(config.ticketChannel);
-        if (!channel) continue;
-
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId("create_ticket")
-                .setLabel("🎫 開啟工單")
-                .setStyle(ButtonStyle.Primary)
-        );
-
-        channel.send({
-            content: `📢 ${roleMention(config.notifyRole)}\n**自創工單機器人**\n用途：提交建議、提出疑問\n⚠️ 若遇問題請聯繫 ${userMention(ADMIN_USER_ID)}`,
-            components: [row]
-        });
-    }
 });
 
 // 處理按鈕互動
@@ -91,7 +70,6 @@ client.on("interactionCreate", async interaction => {
     }
 });
 
-// ✅ 導出 client 給 server.js 使用
+// 導出 client
 module.exports = client;
-
 client.login(process.env.DISCORD_TOKEN);
