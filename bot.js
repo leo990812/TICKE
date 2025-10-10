@@ -1,10 +1,19 @@
 // bot.js
 require("dotenv").config();
-const { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, roleMention, userMention } = require("discord.js");
+const { 
+    Client, GatewayIntentBits, Partials, 
+    ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits,
+    roleMention, userMention 
+} = require("discord.js");
 const settingsDB = require("./settingsDB");
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers],
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers
+    ],
     partials: [Partials.Channel]
 });
 
@@ -14,7 +23,7 @@ const TICKET_CATEGORY_NAME = "🎫票口 Ticket";
 client.once("ready", () => {
     console.log(`✅ Bot 已登入 ${client.user.tag}`);
 
-    // 啟動時自動發送按鈕訊息
+    // 啟動時自動發送按鈕訊息（每個已設定的伺服器）
     for (const guildId in settingsDB) {
         const config = settingsDB[guildId];
         const guild = client.guilds.cache.get(guildId);
@@ -36,49 +45,53 @@ client.once("ready", () => {
     }
 });
 
+// 處理按鈕互動
 client.on("interactionCreate", async interaction => {
     try {
-        if (interaction.isButton()) {
-            const config = settingsDB[interaction.guild.id];
-            if (!config) return interaction.reply({ content: "⚠️ 此伺服器還沒設定工單系統！", ephemeral: true });
+        if (!interaction.isButton()) return;
 
-            // 開啟工單
-            if (interaction.customId === "create_ticket") {
-                let category = interaction.guild.channels.cache.find(c => c.type === 4 && c.name === TICKET_CATEGORY_NAME);
-                if (!category) category = await interaction.guild.channels.create({ name: TICKET_CATEGORY_NAME, type: 4 });
+        const config = settingsDB[interaction.guild.id];
+        if (!config) return interaction.reply({ content: "⚠️ 此伺服器尚未設定工單系統！", ephemeral: true });
 
-                const channel = await interaction.guild.channels.create({
-                    name: `工單-${interaction.user.username}`,
-                    type: 0,
-                    parent: category.id,
-                    permissionOverwrites: [
-                        { id: interaction.guild.roles.everyone, deny: [PermissionFlagsBits.ViewChannel] },
-                        { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-                        { id: config.supportRole, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
-                    ]
-                });
+        // 開啟工單
+        if (interaction.customId === "create_ticket") {
+            let category = interaction.guild.channels.cache.find(c => c.type === 4 && c.name === TICKET_CATEGORY_NAME);
+            if (!category) category = await interaction.guild.channels.create({ name: TICKET_CATEGORY_NAME, type: 4 });
 
-                const closeRow = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId("close_ticket").setLabel("❌ 關閉工單").setStyle(ButtonStyle.Danger)
-                );
+            const channel = await interaction.guild.channels.create({
+                name: `工單-${interaction.user.username}`,
+                type: 0,
+                parent: category.id,
+                permissionOverwrites: [
+                    { id: interaction.guild.roles.everyone, deny: [PermissionFlagsBits.ViewChannel] },
+                    { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+                    { id: config.supportRole, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
+                ]
+            });
 
-                await channel.send({ content: `👋 ${interaction.user}，這裡是你的工單，請描述問題！`, components: [closeRow] });
-                await interaction.reply({ content: `✅ 工單已建立：${channel}`, ephemeral: true });
-            }
+            const closeRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId("close_ticket").setLabel("❌ 關閉工單").setStyle(ButtonStyle.Danger)
+            );
 
-            // 關閉工單
-            if (interaction.customId === "close_ticket") {
-                // 只有支援角色或建立者可關閉
-                if (interaction.member.roles.cache.has(config.supportRole) || interaction.user.id === interaction.channel.permissionOverwrites.cache.find(o => o.type === "member" && o.allow.has(PermissionFlagsBits.ViewChannel))?.id) {
-                    await interaction.channel.delete();
-                } else {
-                    await interaction.reply({ content: "❌ 你沒有權限關閉工單", ephemeral: true });
-                }
+            await channel.send({ content: `👋 ${interaction.user}，這裡是你的工單，請描述問題！`, components: [closeRow] });
+            await interaction.reply({ content: `✅ 工單已建立：${channel}`, ephemeral: true });
+        }
+
+        // 關閉工單
+        if (interaction.customId === "close_ticket") {
+            const memberRoles = interaction.member.roles.cache;
+            if (memberRoles.has(config.supportRole) || interaction.user.id === interaction.channel.permissionOverwrites.cache.find(o => o.type === "member")?.id) {
+                await interaction.channel.delete();
+            } else {
+                await interaction.reply({ content: "❌ 你沒有權限關閉工單", ephemeral: true });
             }
         }
     } catch (err) {
         console.error("❌ 工單互動錯誤：", err);
     }
 });
+
+// ✅ 導出 client 給 server.js 使用
+module.exports = client;
 
 client.login(process.env.DISCORD_TOKEN);
