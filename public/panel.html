@@ -142,15 +142,19 @@ window.onload = async () => {
         if (token) {
             document.getElementById('login-btn').style.display = 'none';
             try {
-                // 呼叫後端 API，取得機器人已加入的伺服器
+                // 取得機器人已加入的伺服器
                 const res = await fetch('/api/bot/guilds');
                 const botGuilds = await res.json();
 
                 const select = document.getElementById('guild-select');
+                select.innerHTML = '';
                 botGuilds.forEach(g => select.innerHTML += `<option value="${g.id}">${g.name}</option>`);
 
                 if (select.options.length > 0) {
                     document.getElementById('panel').style.display = 'block';
+                    // 自動選第一個伺服器並觸發 onchange
+                    select.selectedIndex = 0;
+                    select.dispatchEvent(new Event('change'));
                 } else {
                     document.getElementById('status').innerText = '❌ 機器人尚未加入任何伺服器';
                 }
@@ -162,26 +166,35 @@ window.onload = async () => {
     }
 };
 
+// 當選擇伺服器時抓頻道和角色
 document.getElementById('guild-select').onchange = async function() {
     const guildId = this.value;
     if (!guildId) return;
-    const res = await fetch(`/api/servers/${guildId}/info`);
-    const data = await res.json();
 
-    const channelSelect = document.getElementById('channel-select');
-    channelSelect.innerHTML = '';
-    data.channels.forEach(c => channelSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+    try {
+        const res = await fetch(`/api/servers/${guildId}/info`);
+        const data = await res.json();
 
-    const notifySelect = document.getElementById('notify-role-select');
-    const supportSelect = document.getElementById('support-role-select');
-    notifySelect.innerHTML = '';
-    supportSelect.innerHTML = '';
-    data.roles.forEach(r => {
-        notifySelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
-        supportSelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
-    });
+        const channelSelect = document.getElementById('channel-select');
+        channelSelect.innerHTML = '';
+        data.channels.forEach(c => channelSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+
+        const notifySelect = document.getElementById('notify-role-select');
+        const supportSelect = document.getElementById('support-role-select');
+        notifySelect.innerHTML = '';
+        supportSelect.innerHTML = '';
+        data.roles.forEach(r => {
+            notifySelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+            supportSelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+        });
+
+    } catch (err) {
+        console.error('取得頻道或角色失敗', err);
+        document.getElementById('status').innerText = '❌ 無法取得頻道或角色';
+    }
 };
 
+// 儲存設定
 document.getElementById('save-btn').onclick = async () => {
     const guildId = document.getElementById('guild-select').value;
     const body = {
@@ -189,13 +202,18 @@ document.getElementById('save-btn').onclick = async () => {
         notifyRole: document.getElementById('notify-role-select').value,
         supportRole: document.getElementById('support-role-select').value
     };
-    const res = await fetch(`/api/servers/${guildId}/settings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    document.getElementById('status').innerText = data.success ? '✅ 設定成功' : '❌ 設定失敗';
+    try {
+        const res = await fetch(`/api/servers/${guildId}/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        document.getElementById('status').innerText = data.success ? '✅ 設定成功' : '❌ 設定失敗';
+    } catch (err) {
+        console.error('儲存設定失敗', err);
+        document.getElementById('status').innerText = '❌ 儲存設定失敗';
+    }
 };
 </script>
 </body>
