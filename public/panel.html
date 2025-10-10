@@ -105,7 +105,7 @@
 </style>
 </head>
 <body>
-<h1>自創工單控制面板</h1>
+<h1>私人小舖工單機器人控制面板</h1>
 
 <button id="login-btn">登入 Discord</button>
 
@@ -113,16 +113,16 @@
   <label>選擇伺服器:</label>
   <select id="guild-select"></select>
 
-  <label>選擇工單頻道:</label>
+  <label>發送頻道:</label>
   <select id="channel-select"></select>
 
-  <label>通知角色:</label>
+  <label>內文:</label>
   <select id="notify-role-select"></select>
 
-  <label>支援角色:</label>
+  <label>查看工單權限身分:</label>
   <select id="support-role-select"></select>
 
-  <button id="save-btn">儲存設定</button>
+  <button id="save-btn">發布</button>
   <div id="status"></div>
 </div>
 
@@ -218,3 +218,4 @@ document.getElementById('save-btn').onclick = async () => {
 </script>
 </body>
 </html>
+
