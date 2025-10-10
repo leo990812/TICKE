@@ -3,35 +3,96 @@
 <head>
 <meta charset="UTF-8">
 <title>工單控制面板</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-<div class="container py-5">
-    <h1 class="mb-4">工單控制面板</h1>
-    <form id="settingsForm">
-        <div class="mb-3"><label class="form-label">伺服器 ID</label><input type="text" class="form-control" id="guildId" required></div>
-        <div class="mb-3"><label class="form-label">通知角色 ID</label><input type="text" class="form-control" id="notifyRole" required></div>
-        <div class="mb-3"><label class="form-label">支援角色 ID</label><input type="text" class="form-control" id="supportRole" required></div>
-        <div class="mb-3"><label class="form-label">按鈕頻道 ID</label><input type="text" class="form-control" id="ticketChannel" required></div>
-        <button type="submit" class="btn btn-primary">儲存設定</button>
-    </form>
-    <div id="msg" class="mt-3"></div>
+<body>
+<h1>自創工單控制面板</h1>
+
+<button id="login-btn">登入 Discord</button>
+
+<div id="panel" style="display:none;">
+  <label>選擇伺服器:</label>
+  <select id="guild-select"></select>
+  <br><br>
+
+  <label>選擇工單頻道:</label>
+  <select id="channel-select"></select>
+  <br><br>
+
+  <label>通知角色:</label>
+  <select id="notify-role-select"></select>
+  <br><br>
+
+  <label>支援角色:</label>
+  <select id="support-role-select"></select>
+  <br><br>
+
+  <button id="save-btn">儲存設定</button>
+  <div id="status"></div>
 </div>
+
 <script>
-document.getElementById("settingsForm").addEventListener("submit", async e=>{
-    e.preventDefault();
-    const guildId = document.getElementById("guildId").value;
-    const notifyRole = document.getElementById("notifyRole").value;
-    const supportRole = document.getElementById("supportRole").value;
-    const ticketChannel = document.getElementById("ticketChannel").value;
+const clientId = '你的Discord應用程式ClientID';
+const redirectUri = '你的Render網址/panel.html';
+
+document.getElementById('login-btn').onclick = () => {
+    const url = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=identify%20guilds`;
+    window.location.href = url;
+};
+
+// 登入後解析 token
+window.onload = () => {
+    if (window.location.hash) {
+        const params = new URLSearchParams(window.location.hash.substring(1));
+        const token = params.get('access_token');
+        if (token) {
+            fetch('https://discord.com/api/users/@me/guilds', { headers: { Authorization: `Bearer ${token}` } })
+            .then(res => res.json())
+            .then(guilds => {
+                const select = document.getElementById('guild-select');
+                guilds.filter(g => g.permissions & 0x20) // 有管理權限
+                    .forEach(g => select.innerHTML += `<option value="${g.id}">${g.name}</option>`);
+                document.getElementById('panel').style.display = 'block';
+            });
+        }
+    }
+};
+
+// 當選擇伺服器後抓頻道與角色（需要後端 API 支援）
+document.getElementById('guild-select').onchange = async function() {
+    const guildId = this.value;
+    const res = await fetch(`/api/servers/${guildId}/info`);
+    const data = await res.json();
+
+    const channelSelect = document.getElementById('channel-select');
+    channelSelect.innerHTML = '';
+    data.channels.forEach(c => channelSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+
+    const notifySelect = document.getElementById('notify-role-select');
+    const supportSelect = document.getElementById('support-role-select');
+    notifySelect.innerHTML = '';
+    supportSelect.innerHTML = '';
+    data.roles.forEach(r => {
+        notifySelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+        supportSelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+    });
+};
+
+// 儲存設定
+document.getElementById('save-btn').onclick = async () => {
+    const guildId = document.getElementById('guild-select').value;
+    const body = {
+        ticketChannel: document.getElementById('channel-select').value,
+        notifyRole: document.getElementById('notify-role-select').value,
+        supportRole: document.getElementById('support-role-select').value
+    };
     const res = await fetch(`/api/servers/${guildId}/settings`, {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({notifyRole,supportRole,ticketChannel})
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
     });
     const data = await res.json();
-    document.getElementById("msg").innerText = data.success?"✅ 設定成功":"❌ 設定失敗";
-});
+    document.getElementById('status').innerText = data.success ? '✅ 設定成功' : '❌ 設定失敗';
+};
 </script>
 </body>
 </html>
