@@ -1,125 +1,69 @@
-const express = require("express");
-const session = require("express-session");
-const axios = require("axios");
-const bodyParser = require("body-parser");
-const path = require("path");
+// server.js
 require("dotenv").config();
+const express = require("express");
+const path = require("path");
+const bodyParser = require("body-parser");
+const settingsDB = require("./settingsDB");
+const client = require("./bot");
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, roleMention, userMention } = require("discord.js");
 
 const app = express();
-
-app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, "public")));
 
-app.use(
-  session({
-    secret: "your_secret_key",
-    resave: false,
-    saveUninitialized: true,
-  })
-);
-
-// Discord OAuth2 登入
-const CLIENT_ID = process.env.CLIENT_ID;
-const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const REDIRECT_URI = process.env.REDIRECT_URI;
-const BOT_TOKEN = process.env.BOT_TOKEN;
-
-app.get("/login", (req, res) => {
-  res.redirect(
-    `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
-      REDIRECT_URI
-    )}&response_type=code&scope=identify%20guilds`
-  );
+// ✅ 機器人已加入伺服器
+app.get("/api/bot/guilds", async (req, res) => {
+    try {
+        const guilds = client.guilds.cache.map(g => ({ id: g.id, name: g.name }));
+        res.json(guilds);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "無法取得機器人伺服器" });
+    }
 });
 
-app.get("/callback", async (req, res) => {
-  const code = req.query.code;
+// ✅ 伺服器頻道與角色資訊
+app.get("/api/servers/:id/info", (req, res) => {
+    const guild = client.guilds.cache.get(req.params.id);
+    if (!guild) return res.json({ channels: [], roles: [] });
 
-  try {
-    const tokenRes = await axios.post(
-      "https://discord.com/api/oauth2/token",
-      new URLSearchParams({
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        grant_type: "authorization_code",
-        code: code,
-        redirect_uri: REDIRECT_URI,
-      }),
-      {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      }
-    );
+    const channels = guild.channels.cache.filter(c => c.type === 0).map(c => ({ id: c.id, name: c.name }));
+    const roles = guild.roles.cache.map(r => ({ id: r.id, name: r.name }));
 
-    req.session.access_token = tokenRes.data.access_token;
-
-    res.redirect("/panel");
-  } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.send("登入失敗");
-  }
+    res.json({ channels, roles });
 });
 
-app.get("/panel", async (req, res) => {
-  if (!req.session.access_token) return res.redirect("/login");
+// ✅ 更新伺服器設定並發送訊息
+app.post("/api/servers/:id/settings", async (req, res) => {
+    settingsDB[req.params.id] = req.body;
+    const guild = client.guilds.cache.get(req.params.id);
 
-  try {
-    // 抓使用者伺服器
-    const guildRes = await axios.get("https://discord.com/api/users/@me/guilds", {
-      headers: { Authorization: `Bearer ${req.session.access_token}` },
-    });
+    if (guild) {
+        const channel = guild.channels.cache.get(req.body.ticketChannel);
+        if (channel) {
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId("create_ticket")
+                    .setLabel(req.body.buttonText || "🎫 開啟工單")
+                    .setStyle(ButtonStyle.Primary)
+            );
 
-    // 抓機器人已加入的伺服器
-    const botGuilds = await axios.get("https://discord.com/api/users/@me/guilds", {
-      headers: { Authorization: `Bot ${BOT_TOKEN}` },
-    });
+            // ⚠️ 如果要 ping
+            let pingText = "";
+            if (req.body.pingRole && req.body.notifyRole) {
+                pingText = `<@&${req.body.notifyRole}>`; // 正確格式，不會 @@
+            }
 
-    const userGuilds = guildRes.data;
-    const botGuildList = botGuilds.data;
+            await channel.send({
+                content: `${pingText}\n${req.body.messageContent || "📢 **自創工單機器人**\n用途：提交建議、提出疑問"}\n⚠️ 若遇問題請聯繫 ${userMention(process.env.ADMIN_USER_ID)}`,
+                components: [row]
+            });
+        }
+    }
 
-    // 過濾：只顯示機器人已加入的伺服器
-    const filteredGuilds = userGuilds.filter((g) =>
-      botGuildList.some((bg) => bg.id === g.id)
-    );
-
-    res.sendFile(path.join(__dirname, "panel.html"));
-    req.session.guilds = filteredGuilds;
-  } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.send("載入失敗");
-  }
+    res.json({ success: true });
 });
 
-// 提交表單 → 發送 webhook
-app.post("/send", async (req, res) => {
-  const { webhookUrl, message, buttonText, allowPing } = req.body;
-
-  try {
-    await axios.post(webhookUrl, {
-      content: message,
-      allowed_mentions: allowPing === "true"
-        ? { parse: ["roles", "users", "everyone"] }
-        : { parse: [] },
-      components: [
-        {
-          type: 1,
-          components: [
-            {
-              type: 2,
-              style: 1,
-              label: buttonText || "按鈕",
-              custom_id: "custom_button",
-            },
-          ],
-        },
-      ],
-    });
-
-    res.send("✅ 發送成功！");
-  } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.send("❌ 發送失敗");
-  }
-});
-
-app.listen(3000, () => console.log("✅ 後端已啟動 http://localhost:3000"));
-
+// 基本頁面
+app.get("/", (req, res) => res.send("Bot 控制面板在線"));
+app.listen(process.env.PORT || 3000, () => console.log("🌐 Web server started"));
