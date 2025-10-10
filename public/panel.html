@@ -4,57 +4,103 @@
 <meta charset="UTF-8">
 <title>工單控制面板</title>
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC&display=swap');
+
     body {
         font-family: 'Noto Sans TC', sans-serif;
-        background-color: #1e1e2f;
+        background: linear-gradient(135deg, #1e1e2f, #14142b);
         color: #f0f0f0;
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 40px;
+        justify-content: flex-start;
+        min-height: 100vh;
+        padding: 50px 20px;
     }
+
     h1 {
-        margin-bottom: 30px;
         color: #ffcc00;
+        font-size: 32px;
+        margin-bottom: 40px;
+        text-shadow: 0 0 8px rgba(255, 204, 0, 0.7);
     }
+
     .panel-container {
         background: #2c2c3e;
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        width: 400px;
+        padding: 35px 25px;
+        border-radius: 16px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+        width: 420px;
+        transition: transform 0.2s;
     }
+
+    .panel-container:hover {
+        transform: translateY(-5px);
+    }
+
     label {
         display: block;
-        margin: 15px 0 5px;
+        margin: 18px 0 6px;
         font-weight: bold;
+        font-size: 14px;
+        color: #ffd700;
     }
+
     select, button {
         width: 100%;
-        padding: 8px 12px;
-        border-radius: 8px;
+        padding: 10px 14px;
+        border-radius: 10px;
         border: none;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
         font-size: 14px;
+        outline: none;
+        transition: all 0.2s;
     }
+
     select {
         background-color: #1e1e2f;
         color: #f0f0f0;
     }
+
+    select:hover {
+        background-color: #33334d;
+    }
+
     button {
         background-color: #ffcc00;
         color: #1e1e2f;
         font-weight: bold;
         cursor: pointer;
-        transition: 0.2s;
+        box-shadow: 0 4px 12px rgba(255,204,0,0.4);
     }
+
     button:hover {
         background-color: #e6b800;
+        box-shadow: 0 6px 18px rgba(255,204,0,0.6);
     }
+
     #status {
-        margin-top: 10px;
+        margin-top: 15px;
         text-align: center;
         font-weight: bold;
+        font-size: 15px;
+    }
+
+    #login-btn {
+        padding: 12px 20px;
+        font-size: 16px;
+        border-radius: 12px;
+        border: none;
+        background-color: #7289da;
+        color: #fff;
+        cursor: pointer;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(114,137,218,0.5);
+        transition: 0.2s;
+    }
+
+    #login-btn:hover {
+        background-color: #5b6eae;
     }
 </style>
 </head>
@@ -94,17 +140,20 @@ window.onload = async () => {
         const params = new URLSearchParams(window.location.hash.substring(1));
         const token = params.get('access_token');
         if (token) {
-            document.getElementById('login-btn').style.display = 'none'; // 登入後隱藏按鈕
+            document.getElementById('login-btn').style.display = 'none';
             try {
                 const res = await fetch('https://discord.com/api/users/@me/guilds', { 
                     headers: { Authorization: `Bearer ${token}` } 
                 });
                 const guilds = await res.json();
                 const select = document.getElementById('guild-select');
-                // 篩選有管理權限的伺服器
                 guilds.filter(g => g.permissions & 0x20)
                       .forEach(g => select.innerHTML += `<option value="${g.id}">${g.name}</option>`);
-                document.getElementById('panel').style.display = 'block';
+                if (select.options.length > 0) {
+                    document.getElementById('panel').style.display = 'block';
+                } else {
+                    document.getElementById('status').innerText = '❌ 沒有管理權限的伺服器';
+                }
             } catch (err) {
                 console.error('取得伺服器失敗', err);
             }
@@ -112,7 +161,6 @@ window.onload = async () => {
     }
 };
 
-// 選擇伺服器後抓頻道與角色
 document.getElementById('guild-select').onchange = async function() {
     const guildId = this.value;
     if (!guildId) return;
@@ -133,7 +181,6 @@ document.getElementById('guild-select').onchange = async function() {
     });
 };
 
-// 儲存設定
 document.getElementById('save-btn').onclick = async () => {
     const guildId = document.getElementById('guild-select').value;
     const body = {
