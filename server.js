@@ -10,16 +10,22 @@ const app = express();
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// 獲取伺服器設定
-app.get("/api/servers/:id", (req, res) => {
-    res.json(settingsDB[req.params.id] || {});
+// 返回伺服器頻道與角色資訊給前端
+app.get("/api/servers/:id/info", (req, res) => {
+    const guild = client.guilds.cache.get(req.params.id);
+    if (!guild) return res.json({ channels: [], roles: [] });
+
+    const channels = guild.channels.cache.filter(c => c.type === 0) // 文字頻道
+        .map(c => ({ id: c.id, name: c.name }));
+    const roles = guild.roles.cache.map(r => ({ id: r.id, name: r.name }));
+
+    res.json({ channels, roles });
 });
 
 // 更新伺服器設定
 app.post("/api/servers/:id/settings", async (req, res) => {
     settingsDB[req.params.id] = req.body;
 
-    // 確保 Bot 已登入
     const guild = client.guilds.cache.get(req.params.id);
     if (guild) {
         const channel = guild.channels.cache.get(req.body.ticketChannel);
