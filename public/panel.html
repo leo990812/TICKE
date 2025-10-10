@@ -129,8 +129,9 @@ document.getElementById('guild-select').onchange = async function() {
         notifySelect.innerHTML = '';
         supportSelect.innerHTML = '';
         data.roles.forEach(r => {
-            notifySelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
-            supportSelect.innerHTML += `<option value="${r.id}">${r.name}</option>`;
+            const roleName = r.name === "@everyone" ? "@everyone" : r.name; // 修正 @@everyone
+            notifySelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
+            supportSelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
         });
     } catch (err) {
         console.error(err);
@@ -145,7 +146,7 @@ document.getElementById('save-btn').onclick = async () => {
         notifyRole: document.getElementById('notify-role-select').value,
         supportRole: document.getElementById('support-role-select').value,
         buttonText: document.getElementById('ticket-button-text').value || "🎫 開啟工單",
-        messageContent: document.getElementById('ticket-message-content').value || "用途：提交建議、提出疑問",
+        messageContent: document.getElementById('ticket-message-content').value || "請描述問題...",
         pingRole: document.getElementById('ping-role').checked
     };
     try {
