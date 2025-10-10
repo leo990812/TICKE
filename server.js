@@ -1,9 +1,10 @@
+// server.js
 require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const bodyParser = require("body-parser");
 const settingsDB = require("./settingsDB");
-const bot = require("./bot"); // 確保 bot.js 被引用
+const client = require("./bot"); // 導入 bot.js 的 client
 
 const app = express();
 app.use(bodyParser.json());
@@ -15,11 +16,11 @@ app.get("/api/servers/:id", (req, res) => {
 });
 
 // 更新伺服器設定
-app.post("/api/servers/:id/settings", (req, res) => {
+app.post("/api/servers/:id/settings", async (req, res) => {
     settingsDB[req.params.id] = req.body;
 
-    // 儲存後自動發送按鈕
-    const guild = bot.client.guilds.cache.get(req.params.id);
+    // 確保 Bot 已登入
+    const guild = client.guilds.cache.get(req.params.id);
     if (guild) {
         const channel = guild.channels.cache.get(req.body.ticketChannel);
         if (channel) {
@@ -27,7 +28,8 @@ app.post("/api/servers/:id/settings", (req, res) => {
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId("create_ticket").setLabel("🎫 開啟工單").setStyle(ButtonStyle.Primary)
             );
-            channel.send({
+
+            await channel.send({
                 content: `📢 ${roleMention(req.body.notifyRole)}\n**自創工單機器人**\n用途：提交建議、提出疑問\n⚠️ 若遇問題請聯繫 ${userMention(process.env.ADMIN_USER_ID)}`,
                 components: [row]
             });
