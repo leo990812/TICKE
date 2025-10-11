@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>私人小舖工單機器人控制面板</title>
+<title>私人小舖工單控制面板</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC&display=swap');
 body {
@@ -96,7 +96,9 @@ button:hover {
 }
 
 /* Discord 登入按鈕 */
-#login-btn, #invite-btn {
+#login-btn {
+  width: 100%;
+  max-width: 500px; /* 最大寬度限制 */
   padding: 16px 0;
   font-size: 18px;
   border-radius: 12px;
@@ -108,7 +110,7 @@ button:hover {
   box-shadow: 0 4px 12px rgba(88,101,242,0.5);
   transition: 0.2s;
 }
-#login-btn:hover, #invite-btn:hover {
+#login-btn:hover {
   background-color: #4752C4;
 }
 
@@ -146,7 +148,6 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 #notify-role-select, #log-channel-select { display: none; }
 
-/* 頁尾 */
 .footer {
   margin-top: 40px;
   font-size: 13px;
@@ -154,7 +155,6 @@ input:checked + .slider:before { transform: translateX(22px); }
   text-align: center;
 }
 
-/* Discord logo 懸浮按鈕 */
 .discord-float {
   position: fixed;
   bottom: 25px;
@@ -184,7 +184,7 @@ input:checked + .slider:before { transform: translateX(22px); }
 </head>
 <body>
 
-<h1>私人小舖工單機器人控制面板</h1>
+<h1>私人小舖工單控制面板</h1>
 
 <!-- 登入區 -->
 <div style="margin-bottom:25px;">
@@ -236,7 +236,7 @@ input:checked + .slider:before { transform: translateX(22px); }
 </div>
 
 <div class="footer">
-  製作者：maolixiaowuguo ｜ 客服聯絡Discord：maolixiaowuguo
+  製作者：Leosergo ｜ 客服聯絡：@Haven
 </div>
 
 <div class="discord-float" onclick="window.open('https://discord.gg/wrNZ9hFMT3', '_blank')">
@@ -254,13 +254,11 @@ const notifySelect = document.getElementById('notify-role-select');
 const saveLogCheckbox = document.getElementById('save-log-checkbox');
 const logSelect = document.getElementById('log-channel-select');
 
-// Discord登入
 loginBtn.addEventListener('click', () => {
   const url = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=identify%20guilds`;
   window.location.href = url;
 });
 
-// 邀請機器人按鈕
 inviteBtn.addEventListener('click', () => {
   const guildSelectEl = document.getElementById('guild-select');
   const guildId = guildSelectEl.value;
@@ -269,7 +267,6 @@ inviteBtn.addEventListener('click', () => {
   window.open(inviteUrl, '_blank');
 });
 
-// 開關切換
 pingCheckbox.addEventListener('change', () => {
   notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
 });
@@ -277,7 +274,6 @@ saveLogCheckbox.addEventListener('change', () => {
   logSelect.style.display = saveLogCheckbox.checked ? 'inline-block' : 'none';
 });
 
-// 初始化面板
 async function initPanel() {
   if (!window.location.hash) return;
   const params = new URLSearchParams(window.location.hash.substring(1));
@@ -353,4 +349,3 @@ initPanel();
 </script>
 </body>
 </html>
-
