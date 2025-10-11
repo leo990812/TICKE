@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>私人小舖工單控制面板</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
 body {
   font-family: 'Noto Sans TC', sans-serif;
   background: linear-gradient(135deg, #1e1e2f, #14142b);
@@ -12,15 +12,71 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   min-height: 100vh;
   padding: 50px 20px;
+  position: relative;
 }
+
 h1 {
   color: #ffcc00;
   font-size: 32px;
   margin-bottom: 40px;
+  text-shadow: none;
 }
+
+/* 登入畫面區塊 */
+#login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  transition: opacity 0.4s ease, transform 0.3s ease;
+  text-align: center;
+}
+
+#login-container p {
+  color: #bdbdfc;
+  font-size: 15px;
+  margin: 0;
+}
+
+#login-btn {
+  background-color: #5865F2;
+  color: white;
+  font-weight: bold;
+  font-size: 17px;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 26px;
+  cursor: pointer;
+  margin-top: 10px;
+  box-shadow: 0 6px 16px rgba(88,101,242,0.5);
+  transition: all 0.25s;
+}
+
+#login-btn:hover {
+  background-color: #4752C4;
+  transform: scale(1.05);
+}
+
+/* Discord logo右下角 */
+.discord-logo {
+  position: fixed;
+  right: 25px;
+  bottom: 25px;
+  width: 65px;
+  height: 65px;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 10px rgba(88,101,242,0.5));
+  transition: transform 0.3s;
+}
+.discord-logo:hover {
+  transform: scale(1.1);
+}
+
+/* 控制面板 */
 .panel-container {
   background: #2c2c3e;
   padding: 35px 40px 40px 30px;
@@ -28,6 +84,7 @@ h1 {
   box-shadow: 0 8px 30px rgba(0,0,0,0.6);
   width: 420px;
   transition: transform 0.2s;
+  display: none;
 }
 .panel-container:hover { transform: translateY(-5px); }
 
@@ -54,23 +111,9 @@ select, input[type=text], textarea {
   background-color: #1e1e2f;
   color: #f0f0f0;
 }
+select:hover, input[type=text]:hover, textarea:hover { background-color: #33334d; }
 
-select option {
-  border-bottom: 1px solid #333;
-  padding: 8px;
-}
-select option:hover {
-  background-color: #3a3a5c;
-}
-
-select:hover, input[type=text]:hover, textarea:hover {
-  background-color: #33334d;
-}
-
-textarea {
-  resize: vertical;
-  min-height: 100px;
-}
+textarea { resize: vertical; min-height: 100px; }
 
 button {
   background-color: #ffcc00;
@@ -79,7 +122,6 @@ button {
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(255,204,0,0.4);
 }
-
 button:hover {
   background-color: #e6b800;
   box-shadow: 0 6px 18px rgba(255,204,0,0.6);
@@ -92,102 +134,42 @@ button:hover {
   font-size: 15px;
 }
 
-/* Discord 登入按鈕 */
-#login-btn, #invite-btn {
-  padding: 12px 20px;
-  font-size: 16px;
-  border-radius: 12px;
-  border: none;
-  background-color: #5865F2;
-  color: #fff;
-  cursor: pointer;
-  margin-bottom: 15px;
-  box-shadow: 0 4px 12px rgba(88,101,242,0.5);
-  transition: 0.2s;
-}
-#login-btn:hover, #invite-btn:hover {
-  background-color: #4752C4;
-}
-
-/* 開關樣式 */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 48px;
-  height: 26px;
-  margin-right: 10px;
-  vertical-align: middle;
-}
+.switch { position: relative; display: inline-block; width: 48px; height: 26px; margin-right: 10px; vertical-align: middle; }
 .switch input { display: none; }
-.slider {
-  position: absolute;
-  cursor: pointer;
-  background-color: #ccc;
-  border-radius: 26px;
-  top: 0; left: 0; right: 0; bottom: 0;
-  transition: 0.4s;
-}
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 22px;
-  width: 22px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  border-radius: 50%;
-  transition: 0.4s;
-}
+.slider { position: absolute; cursor: pointer; background-color: #ccc; border-radius: 26px; top: 0; left: 0; right: 0; bottom: 0; transition: 0.4s; }
+.slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 2px; bottom: 2px; background-color: white; border-radius: 50%; transition: 0.4s; }
 input:checked + .slider { background-color: #ffcc00; }
 input:checked + .slider:before { transform: translateX(22px); }
 
 #notify-role-select, #log-channel-select { display: none; }
 
-/* 頁尾 */
 .footer {
   margin-top: 40px;
   font-size: 13px;
   color: rgba(255,255,255,0.6);
   text-align: center;
 }
-
-/* Discord logo 懸浮按鈕 */
-.discord-float {
-  position: fixed;
-  bottom: 25px;
-  right: 25px;
-  background-color: #5865F2;
-  border-radius: 50%;
-  box-shadow: 0 0 20px rgba(88,101,242,0.5);
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  z-index: 1000;
-}
-.discord-float:hover {
-  transform: scale(1.1);
-  background-color: #4752C4;
-}
-.discord-float img {
-  width: 38px;
-  height: 38px;
-  filter: brightness(1.1);
-}
 </style>
 </head>
 <body>
+
 <h1>私人小舖工單控制面板</h1>
 
-<div style="display:flex; gap:10px; margin-bottom:25px;">
+<!-- 登入畫面 -->
+<div id="login-container">
+  <p>加入社群</p>
   <button id="login-btn">登入 Discord</button>
-  <button id="invite-btn">加入伺服器</button>
 </div>
 
-<div id="panel" class="panel-container" style="display:none;">
+<!-- Discord logo -->
+<a href="https://discord.gg/wrNZ9hFMT3" target="_blank">
+  <img src="https://cdn.worldvectorlogo.com/logos/discord-icon-svgrepo-com.svg" class="discord-logo" alt="Discord Logo">
+</a>
+
+<!-- 控制面板 -->
+<div id="panel" class="panel-container">
+  <button id="invite-btn">邀請機器人</button>
+
   <label>選擇伺服器:</label>
   <select id="guild-select"></select>
 
@@ -195,26 +177,16 @@ input:checked + .slider:before { transform: translateX(22px); }
   <select id="channel-select"></select>
 
   <label>
-    <span class="switch">
-      <input type="checkbox" id="ping-role">
-      <span class="slider"></span>
-    </span>
-    Ping 通知角色
+    <span class="switch"><input type="checkbox" id="ping-role"><span class="slider"></span></span>Ping 通知角色
   </label>
-
   <select id="notify-role-select"></select>
 
   <label>查看工單權限角色:</label>
   <select id="support-role-select"></select>
 
   <label>
-    <span class="switch">
-      <input type="checkbox" id="save-log-checkbox">
-      <span class="slider"></span>
-    </span>
-    保存工單紀錄
+    <span class="switch"><input type="checkbox" id="save-log-checkbox"><span class="slider"></span></span>保存工單紀錄
   </label>
-
   <select id="log-channel-select"></select>
 
   <label>按鈕上方內文:</label>
@@ -234,17 +206,13 @@ input:checked + .slider:before { transform: translateX(22px); }
   製作者：Leosergo ｜ 客服聯絡：@Haven
 </div>
 
-<!-- Discord 浮動 LOGO -->
-<div class="discord-float" onclick="window.open('https://discord.gg/wrNZ9hFMT3', '_blank')">
-  <img src="https://cdn.jsdelivr.net/gh/edent/SuperTinyIcons/images/svg/discord.svg" alt="Discord">
-</div>
-
 <script>
 const clientId = '1426148089403805697';
 const redirectUri = 'https://ticke-0cp3.onrender.com/panel.html';
 const loginBtn = document.getElementById('login-btn');
 const inviteBtn = document.getElementById('invite-btn');
 const panel = document.getElementById('panel');
+const loginContainer = document.getElementById('login-container');
 const pingCheckbox = document.getElementById('ping-role');
 const notifySelect = document.getElementById('notify-role-select');
 const saveLogCheckbox = document.getElementById('save-log-checkbox');
@@ -256,15 +224,14 @@ loginBtn.addEventListener('click', () => {
   window.location.href = url;
 });
 
-// Discord加入伺服器
+// 改成邀請機器人連結
 inviteBtn.addEventListener('click', () => {
-  window.open('https://discord.gg/wrNZ9hFMT3', '_blank');
+  window.open('https://discord.com/oauth2/authorize?', '_blank');
 });
 
 pingCheckbox.addEventListener('change', () => {
   notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
 });
-
 saveLogCheckbox.addEventListener('change', () => {
   logSelect.style.display = saveLogCheckbox.checked ? 'inline-block' : 'none';
 });
@@ -275,104 +242,12 @@ async function initPanel() {
   const token = params.get('access_token');
   if (!token) return;
 
-  loginBtn.style.display = 'none';
+  loginContainer.style.display = 'none';
   panel.style.display = 'block';
   inviteBtn.style.display = 'inline-block';
-
-  const guildSelect = document.getElementById('guild-select');
-  guildSelect.innerHTML = '';
-
-  let botGuilds = [];
-  try {
-    const res = await fetch('/api/bot/guilds');
-    botGuilds = await res.json();
-  } catch(e) {
-    console.error('取得伺服器失敗', e);
-    document.getElementById('status').innerText = '❌ 無法取得伺服器';
-    return;
-  }
-
-  if (botGuilds.length === 0) {
-    document.getElementById('status').innerText = '❌ 機器人尚未加入任何伺服器';
-    return;
-  }
-
-  botGuilds.forEach(g => {
-    const opt = document.createElement('option');
-    opt.value = g.id;
-    opt.textContent = g.name;
-    guildSelect.appendChild(opt);
-  });
-
-  guildSelect.addEventListener('change', async function() {
-    const guildId = this.value;
-    if (!guildId) return;
-    try {
-      const res = await fetch(`/api/servers/${guildId}/info`);
-      const data = await res.json();
-
-      const channelSelect = document.getElementById('channel-select');
-      const supportSelect = document.getElementById('support-role-select');
-
-      channelSelect.innerHTML = '';
-      supportSelect.innerHTML = '';
-      notifySelect.innerHTML = '';
-      logSelect.innerHTML = '';
-
-      data.channels.forEach(c => {
-        channelSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-        logSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-      });
-
-      data.roles.forEach(r => {
-        const roleName = r.name === "@everyone" ? "@everyone" : r.name;
-        notifySelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
-        supportSelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
-      });
-
-      notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
-      logSelect.style.display = saveLogCheckbox.checked ? 'inline-block' : 'none';
-
-    } catch(err) {
-      console.error('取得頻道/角色失敗', err);
-      document.getElementById('status').innerText = '❌ 無法取得頻道或角色';
-    }
-  });
-
-  guildSelect.dispatchEvent(new Event('change'));
 }
 
 initPanel();
-
-document.getElementById('save-btn').addEventListener('click', async () => {
-  const guildId = document.getElementById('guild-select').value;
-  if (!guildId) return;
-
-  const body = {
-    ticketChannel: document.getElementById('channel-select').value,
-    notifyRole: pingCheckbox.checked ? document.getElementById('notify-role-select').value : null,
-    supportRole: document.getElementById('support-role-select').value,
-    logChannel: saveLogCheckbox.checked ? document.getElementById('log-channel-select').value : null,
-    topText: document.getElementById('ticket-top-text').value || "",
-    buttonText: document.getElementById('ticket-button-text').value || "🎫 開啟工單",
-    welcomeMessage: document.getElementById('welcome-message-content').value || "請描述問題...",
-    pingRole: pingCheckbox.checked,
-    saveLog: saveLogCheckbox.checked
-  };
-
-  try {
-    const res = await fetch(`/api/servers/${guildId}/settings`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    document.getElementById('status').innerText = data.success ? '✅ 設定成功' : '❌ 設定失敗';
-  } catch(err) {
-    console.error(err);
-    document.getElementById('status').innerText = '❌ 儲存設定失敗';
-  }
-});
 </script>
 </body>
 </html>
