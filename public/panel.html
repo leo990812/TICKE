@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
@@ -346,7 +346,38 @@ async function initPanel() {
 }
 
 initPanel();
+
+// === 新增發布功能 ===
+document.getElementById('save-btn').addEventListener('click', async () => {
+  const guildId = document.getElementById('guild-select').value;
+  if (!guildId) return alert('請先選擇伺服器');
+
+  const payload = {
+    ticketChannel: document.getElementById('channel-select').value,
+    buttonText: document.getElementById('ticket-button-text').value,
+    topText: document.getElementById('ticket-top-text').value,
+    welcomeMessage: document.getElementById('welcome-message-content').value,
+    pingUser: null, 
+    notifyRole: document.getElementById('notify-role-select').value
+  };
+
+  try {
+    const res = await fetch(`/api/servers/${guildId}/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+    if (result.success) {
+      document.getElementById('status').innerText = '✅ 設定已發布';
+    } else {
+      document.getElementById('status').innerText = '❌ 發布失敗';
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById('status').innerText = '❌ 發布失敗，請查看 console';
+  }
+});
 </script>
 </body>
 </html>
-
