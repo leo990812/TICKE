@@ -49,7 +49,6 @@ app.post("/api/servers/:id/settings", async (req, res) => {
                     .setStyle(ButtonStyle.Primary)
             );
 
-            // Ping 角色文字
             let pingText = "";
             if (req.body.notifyRole) {
                 pingText = req.body.notifyRole === "@everyone" ? "@everyone" : roleMention(req.body.notifyRole);
@@ -57,15 +56,10 @@ app.post("/api/servers/:id/settings", async (req, res) => {
 
             const topText = req.body.topText || "";
 
-            // 發送按鈕訊息 (只包含 topText + Ping)
+            // 發送訊息 (按鈕 + topText + Ping)
             await channel.send({
-                content: `${pingText}\n${topText}`.trim(),
+                content: `${pingText}\n${topText}\n**自創工單機器人**\n用途：提交建議、提出疑問\n⚠️ 若遇問題請聯繫 ${userMention(process.env.ADMIN_USER_ID)}`,
                 components: [row]
-            });
-
-            // 發送工單歡迎訊息 (完全自訂)
-            await channel.send({
-                content: req.body.welcomeMessage || "📩 @Haven 的工單已建立，支援人員可點擊「接手」開始處理。"
             });
         }
     }
