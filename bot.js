@@ -90,17 +90,27 @@ client.on("interactionCreate", async interaction => {
             permissionOverwrites
         });
 
+        // 按鈕
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("claim_ticket").setLabel("🧾 接手工單").setStyle(ButtonStyle.Primary),
             new ButtonBuilder().setCustomId("close_ticket").setLabel("🔒 關閉工單").setStyle(ButtonStyle.Danger)
         );
 
-        const welcomeMsg = config.welcomeMessage?.trim() || "您的票口已開啟";
+        // 訊息內容與 mentions
+        const welcomeMsg = config.welcomeMessage?.trim() || "📩 歡迎！請描述你的問題";
         const userMention = `<@${interaction.user.id}>`;
         const supportMention = supportRole ? `<@&${supportRole.id}>` : "";
         const messageContent = `${userMention}\n${welcomeMsg}\n${supportMention}`;
 
-        await channel.send({ content: messageContent, components: [row] });
+        await channel.send({
+            content: messageContent,
+            components: [row],
+            allowedMentions: {
+                users: [interaction.user.id],
+                roles: supportRole ? [supportRole.id] : []
+            }
+        });
+
         await interaction.reply({ content: `✅ 工單已建立：${channel}`, ephemeral: true });
     }
 
