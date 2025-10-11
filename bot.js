@@ -1,11 +1,5 @@
-// bot.js
-require("dotenv").config();
-const { 
-    Client, GatewayIntentBits, Partials, 
-    ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits,
-    roleMention, userMention 
-} = require("discord.js");
-const settingsDB = require("./settingsDB");
+const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require("discord.js");
+const config = require("./config.json");
 
 const client = new Client({
     intents: [
@@ -17,59 +11,95 @@ const client = new Client({
     partials: [Partials.Channel]
 });
 
-const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
-const TICKET_CATEGORY_NAME = "🎫票口 Ticket";
-
 client.once("ready", () => {
-    console.log(`✅ Bot 已登入 ${client.user.tag}`);
+    console.log(`✅ 已登入為 ${client.user.tag}`);
 });
 
-// 處理按鈕互動
-client.on("interactionCreate", async interaction => {
-    try {
-        if (!interaction.isButton()) return;
+// ===== 開啟工單區塊 =====
+client.on("interactionCreate", async (interaction) => {
+    if (!interaction.isButton()) return;
 
-        const config = settingsDB[interaction.guild.id];
-        if (!config) return interaction.reply({ content: "⚠️ 此伺服器尚未設定工單系統！", ephemeral: true });
+    // === 開啟工單 ===
+    if (interaction.customId === "open_ticket") {
+        const existingChannel = interaction.guild.channels.cache.find(
+            ch => ch.topic === `ticketOwner:${interaction.user.id}`
+        );
 
-        // 開啟工單
-        if (interaction.customId === "create_ticket") {
-            let category = interaction.guild.channels.cache.find(c => c.type === 4 && c.name === TICKET_CATEGORY_NAME);
-            if (!category) category = await interaction.guild.channels.create({ name: TICKET_CATEGORY_NAME, type: 4 });
-
-            const channel = await interaction.guild.channels.create({
-                name: `工單-${interaction.user.username}`,
-                type: 0,
-                parent: category.id,
-                permissionOverwrites: [
-                    { id: interaction.guild.roles.everyone, deny: [PermissionFlagsBits.ViewChannel] },
-                    { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-                    { id: config.supportRole, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
-                ]
+        if (existingChannel) {
+            return interaction.reply({
+                content: `⚠️ 你已經有一個開啟中的工單：${existingChannel}`,
+                ephemeral: true
             });
-
-            const closeRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId("close_ticket").setLabel("❌ 關閉工單").setStyle(ButtonStyle.Danger)
-            );
-
-            await channel.send({ content: `👋 ${interaction.user}，這裡是你的工單，請描述問題！`, components: [closeRow] });
-            await interaction.reply({ content: `✅ 工單已建立：${channel}`, ephemeral: true });
         }
 
-        // 關閉工單
-        if (interaction.customId === "close_ticket") {
-            const memberRoles = interaction.member.roles.cache;
-            if (memberRoles.has(config.supportRole) || interaction.user.id === interaction.channel.permissionOverwrites.cache.find(o => o.type === "member")?.id) {
-                await interaction.channel.delete();
-            } else {
-                await interaction.reply({ content: "❌ 你沒有權限關閉工單", ephemeral: true });
-            }
+        const channel = await interaction.guild.channels.create({
+            name: `ticket-${interaction.user.username}`,
+            type: 0, // GUILD_TEXT
+            topic: `ticketOwner:${interaction.user.id}`,
+            parent: config.ticketCategory,
+            permissionOverwrites: [
+                {
+                    id: interaction.guild.id,
+                    deny: [PermissionFlagsBits.ViewChannel]
+                },
+                {
+                    id: interaction.user.id,
+                    allow: [
+                        PermissionFlagsBits.ViewChannel,
+                        PermissionFlagsBits.SendMessages,
+                        PermissionFlagsBits.AttachFiles
+                    ]
+                },
+                {
+                    id: config.supportRole,
+                    allow: [
+                        PermissionFlagsBits.ViewChannel,
+                        PermissionFlagsBits.SendMessages,
+                        PermissionFlagsBits.ManageMessages
+                    ]
+                }
+            ]
+        });
+
+        const closeButton = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("close_ticket")
+                .setLabel("🔒 關閉工單")
+                .setStyle(ButtonStyle.Danger)
+        );
+
+        await channel.send({
+            content: `📩 ${interaction.user} 您的工單已建立，支援人員將儘快協助您。`,
+            components: [closeButton]
+        });
+
+        await interaction.reply({
+            content: `✅ 工單已建立：${channel}`,
+            ephemeral: true
+        });
+    }
+
+    // === 關閉工單 ===
+    if (interaction.customId === "close_ticket") {
+        const topic = interaction.channel.topic;
+        const ticketOwner = topic?.startsWith("ticketOwner:") ? topic.split(":")[1] : null;
+
+        const isTicketOwner = interaction.user.id === ticketOwner;
+        const isSupport = interaction.member.roles.cache.has(config.supportRole);
+        const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels);
+
+        if (isTicketOwner || isSupport || isAdmin) {
+            await interaction.channel.send(`🔒 此工單已由 ${interaction.user} 關閉。`);
+            setTimeout(() => {
+                interaction.channel.delete().catch(() => {});
+            }, 1500);
+        } else {
+            await interaction.reply({
+                content: "❌ 只有開啟者、支援人員或管理員可以關閉此工單。",
+                ephemeral: true
+            });
         }
-    } catch (err) {
-        console.error("❌ 工單互動錯誤：", err);
     }
 });
 
-// 導出 client
-module.exports = client;
-client.login(process.env.DISCORD_TOKEN);
+client.login(config.token);
