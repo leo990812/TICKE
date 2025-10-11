@@ -61,8 +61,8 @@ input:checked + .slider:before { transform:translateX(22px); }
   </label>
   <select id="log-channel-select"></select>
 
-  <label>按鈕上方內文:</label>
-  <input type="text" id="ticket-top-text" placeholder="輸入按鈕上方顯示的文字...">
+  <label>按鈕上方內文（可完全自訂）:</label>
+  <textarea id="ticket-top-text" placeholder="輸入按鈕上方顯示的文字..."></textarea>
 
   <label>按鈕文字:</label>
   <input type="text" id="ticket-button-text" placeholder="🎫 開啟工單">
@@ -81,26 +81,21 @@ const notifySelect = document.getElementById('notify-role-select');
 const saveLogCheckbox = document.getElementById('save-log-checkbox');
 const logSelect = document.getElementById('log-channel-select');
 
-// Discord OAuth2 登入
 loginBtn.addEventListener('click', () => {
     const url = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=identify%20guilds`;
     window.location.href = url;
 });
 
-// Ping 角色選單顯示
 pingCheckbox.addEventListener('change', () => {
     notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
 });
 
-// 保存紀錄選單顯示
 saveLogCheckbox.addEventListener('change', () => {
     logSelect.style.display = saveLogCheckbox.checked ? 'inline-block' : 'none';
 });
 
-// 初始化面板
 async function initPanel() {
     if (!window.location.hash) return;
-
     const params = new URLSearchParams(window.location.hash.substring(1));
     const token = params.get('access_token');
     if (!token) return;
@@ -121,11 +116,6 @@ async function initPanel() {
         return;
     }
 
-    if (botGuilds.length === 0) {
-        document.getElementById('status').innerText = '❌ 機器人尚未加入任何伺服器';
-        return;
-    }
-
     botGuilds.forEach(g => {
         const opt = document.createElement('option');
         opt.value = g.id;
@@ -138,71 +128,4 @@ async function initPanel() {
         if (!guildId) return;
 
         try {
-            const res = await fetch(`/api/servers/${guildId}/info`);
-            const data = await res.json();
-
-            const channelSelect = document.getElementById('channel-select');
-            const supportSelect = document.getElementById('support-role-select');
-
-            channelSelect.innerHTML = '';
-            supportSelect.innerHTML = '';
-            notifySelect.innerHTML = '';
-            logSelect.innerHTML = '';
-
-            data.channels.forEach(c => {
-                channelSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-                logSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-            });
-
-            data.roles.forEach(r => {
-                const roleName = r.name === "@everyone" ? "@everyone" : r.name;
-                notifySelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
-                supportSelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
-            });
-
-            notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
-            logSelect.style.display = saveLogCheckbox.checked ? 'inline-block' : 'none';
-
-        } catch(err) {
-            console.error('取得頻道/角色失敗', err);
-            document.getElementById('status').innerText = '❌ 無法取得頻道或角色';
-        }
-    });
-
-    guildSelect.dispatchEvent(new Event('change'));
-}
-
-initPanel();
-
-// 儲存設定
-document.getElementById('save-btn').addEventListener('click', async () => {
-    const guildId = document.getElementById('guild-select').value;
-    if (!guildId) return;
-
-    const body = {
-        ticketChannel: document.getElementById('channel-select').value,
-        notifyRole: pingCheckbox.checked ? document.getElementById('notify-role-select').value : null,
-        supportRole: document.getElementById('support-role-select').value,
-        logChannel: saveLogCheckbox.checked ? document.getElementById('log-channel-select').value : null,
-        topText: document.getElementById('ticket-top-text').value || "",
-        buttonText: document.getElementById('ticket-button-text').value || "🎫 開啟工單",
-        pingRole: pingCheckbox.checked,
-        saveLog: saveLogCheckbox.checked
-    };
-
-    try {
-        const res = await fetch(`/api/servers/${guildId}/settings`, {
-            method: 'POST',
-            headers: { 'Content-Type':'application/json' },
-            body: JSON.stringify(body)
-        });
-        const data = await res.json();
-        document.getElementById('status').innerText = data.success ? '✅ 設定成功' : '❌ 設定失敗';
-    } catch(err) {
-        console.error(err);
-        document.getElementById('status').innerText = '❌ 儲存設定失敗';
-    }
-});
-</script>
-</body>
-</html>
+            const
