@@ -1,9 +1,8 @@
-// bot.js
 require("dotenv").config();
 const {
     Client, GatewayIntentBits, Partials,
     ActionRowBuilder, ButtonBuilder, ButtonStyle,
-    PermissionFlagsBits, AttachmentBuilder
+    PermissionFlagsBits, AttachmentBuilder, roleMention
 } = require("discord.js");
 const fs = require("fs");
 const path = require("path");
@@ -44,7 +43,6 @@ async function fetchAllMessages(channel) {
 
 client.on("interactionCreate", async interaction => {
     if (!interaction.isButton()) return;
-
     const config = settingsDB[interaction.guild.id];
     if (!config) return interaction.reply({ content: "⚠️ 此伺服器尚未設定工單系統！", ephemeral: true });
 
@@ -73,21 +71,34 @@ client.on("interactionCreate", async interaction => {
             new ButtonBuilder().setCustomId("close_ticket").setLabel("🔒 關閉工單").setStyle(ButtonStyle.Danger)
         );
 
+        // 使用者自訂的工單歡迎訊息
+        const welcomeMsg = config.welcomeMessage?.trim();
+        const displayWelcome = welcomeMsg && welcomeMsg.length > 0
+            ? `${welcomeMsg}`
+            : `📩 ${interaction.user} 的工單已建立，支援人員可點擊「接手」開始處理。`;
+
+        // 通知管理員/支援人員角色
+        let notifyText = "";
+        if (config.supportRole) {
+            notifyText = `\n${roleMention(config.supportRole)} 有新工單開啟！`;
+        }
+
         await channel.send({
-            content: `📩 ${interaction.user} 的工單已建立，支援人員可點擊「接手」開始處理。`,
+            content: `${displayWelcome}${notifyText}`,
             components: [row]
         });
 
         await interaction.reply({ content: `✅ 工單已建立：${channel}`, ephemeral: true });
     }
 
-    // === 接手工單 ===
+    // === 接手、關閉工單邏輯（不變）===
     if (interaction.customId === "claim_ticket") {
         const member = interaction.member;
         const isSupport = member.roles.cache.has(config.supportRole);
         const isAdmin = member.permissions.has(PermissionFlagsBits.ManageChannels);
 
-        if (!isSupport && !isAdmin) return interaction.reply({ content: "❌ 只有支援人員或管理員可接手工單。", ephemeral: true });
+        if (!isSupport && !isAdmin)
+            return interaction.reply({ content: "❌ 只有支援人員或管理員可接手工單。", ephemeral: true });
 
         const msg = await interaction.channel.messages.fetch(interaction.message.id);
         const newRow = new ActionRowBuilder().addComponents(
@@ -104,7 +115,7 @@ client.on("interactionCreate", async interaction => {
         await interaction.reply({ content: `✅ 你已接手此工單。`, ephemeral: true });
     }
 
-    // === 關閉工單（第一步：確認提示）===
+    // === 關閉確認與保存紀錄 ===（不動）
     if (interaction.customId === "close_ticket") {
         const confirmRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("confirm_close").setLabel("✅ 確定關閉").setStyle(ButtonStyle.Danger),
@@ -118,12 +129,10 @@ client.on("interactionCreate", async interaction => {
         });
     }
 
-    // === 取消關閉 ===
     if (interaction.customId === "cancel_close") {
         return interaction.update({ content: "✅ 已取消關閉操作。", components: [] });
     }
 
-    // === 確認關閉（第二步：保存紀錄並刪除）===
     if (interaction.customId === "confirm_close") {
         await interaction.update({ content: "📝 正在保存工單紀錄...", components: [] });
 
@@ -134,7 +143,8 @@ client.on("interactionCreate", async interaction => {
         const isSupport = interaction.member.roles.cache.has(config.supportRole);
         const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels);
 
-        if (!isTicketOwner && !isSupport && !isAdmin) return interaction.followUp({ content: "❌ 你沒有權限關閉此工單。", ephemeral: true });
+        if (!isTicketOwner && !isSupport && !isAdmin)
+            return interaction.followUp({ content: "❌ 你沒有權限關閉此工單。", ephemeral: true });
 
         try {
             const messages = await fetchAllMessages(interaction.channel);
