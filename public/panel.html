@@ -16,68 +16,30 @@ body {
     min-height: 100vh;
     padding: 50px 20px;
 }
-h1 {
-    color: #ffcc00;
-    font-size: 32px;
-    margin-bottom: 40px;
-    text-shadow: 0 0 8px rgba(255, 204, 0, 0.7);
-}
-.panel-container {
-    background: #2c2c3e;
-    padding: 35px 25px;
-    border-radius: 16px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
-    width: 420px;
-    transition: transform 0.2s;
-}
+h1 { color: #ffcc00; font-size: 32px; margin-bottom: 40px; text-shadow: 0 0 8px rgba(255,204,0,0.7); }
+.panel-container { background: #2c2c3e; padding: 35px 25px; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); width: 420px; transition: transform 0.2s; }
 .panel-container:hover { transform: translateY(-5px); }
 label { display: block; margin: 18px 0 6px; font-weight: bold; font-size: 14px; color: #ffd700; }
 select, input[type=text], textarea, button { width: 100%; padding: 10px 14px; border-radius: 10px; border: none; margin-bottom: 12px; font-size: 14px; outline: none; transition: all 0.2s; }
 select, input[type=text], textarea { background-color: #1e1e2f; color: #f0f0f0; }
 select:hover, input[type=text]:hover, textarea:hover { background-color: #33334d; }
 textarea { resize: vertical; height: 80px; }
-button {
-    background-color: #ffcc00;
-    color: #1e1e2f;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(255,204,0,0.4);
-}
+button { background-color: #ffcc00; color: #1e1e2f; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255,204,0,0.4); }
 button:hover { background-color: #e6b800; box-shadow: 0 6px 18px rgba(255,204,0,0.6); }
 #status { margin-top: 15px; text-align: center; font-weight: bold; font-size: 15px; }
 #login-btn { padding: 12px 20px; font-size: 16px; border-radius: 12px; border: none; background-color: #7289da; color: #fff; cursor: pointer; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(114,137,218,0.5); transition: 0.2s; }
 #login-btn:hover { background-color: #5b6eae; }
 
-/* 活潑開關樣式 */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 48px;
-  height: 26px;
-  margin-right: 10px;
-}
+/* 活潑開關 */
+.switch { position: relative; display: inline-block; width: 48px; height: 26px; margin-right: 10px; vertical-align: middle; }
 .switch input { display: none; }
-.slider {
-  position: absolute;
-  cursor: pointer;
-  background-color: #ccc;
-  border-radius: 26px;
-  top: 0; left: 0; right: 0; bottom: 0;
-  transition: 0.4s;
-}
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 22px;
-  width: 22px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  border-radius: 50%;
-  transition: 0.4s;
-}
-input:checked + .slider { background-color: #ffcc00; }
-input:checked + .slider:before { transform: translateX(22px); }
+.slider { position: absolute; cursor: pointer; background-color: #ccc; border-radius: 26px; top:0; left:0; right:0; bottom:0; transition:0.4s; }
+.slider:before { position:absolute; content:""; height:22px; width:22px; left:2px; bottom:2px; background-color:white; border-radius:50%; transition:0.4s; }
+input:checked + .slider { background-color:#ffcc00; }
+input:checked + .slider:before { transform:translateX(22px); }
+
+/* 角色選單初始隱藏 */
+#notify-role-select { display:none; }
 </style>
 </head>
 <body>
@@ -95,7 +57,7 @@ input:checked + .slider:before { transform: translateX(22px); }
   <!-- Ping 通知角色開關 -->
   <label>
     <span class="switch">
-      <input type="checkbox" id="ping-role" checked>
+      <input type="checkbox" id="ping-role">
       <span class="slider"></span>
     </span>
     Ping 通知角色
@@ -128,74 +90,125 @@ const panel = document.getElementById('panel');
 const pingCheckbox = document.getElementById('ping-role');
 const notifySelect = document.getElementById('notify-role-select');
 
-// 點擊登入
+// 登入按鈕一定可以點
 loginBtn.addEventListener('click', () => {
     const url = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=identify`;
     window.location.href = url;
 });
 
-// 控制角色選單顯示
+// 控制 Ping 角色選單顯示
 pingCheckbox.addEventListener('change', () => {
     notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
 });
 
-// 登入後初始化
-(async () => {
-    if (window.location.hash) {
+// 初始化函式
+async function initPanel() {
+    try {
+        if (!window.location.hash) return;
         const params = new URLSearchParams(window.location.hash.substring(1));
         const token = params.get('access_token');
-        if (token) {
-            loginBtn.style.display = 'none';
-            try {
-                const res = await fetch('/api/bot/guilds');
-                const botGuilds = await res.json();
-                const guildSelect = document.getElementById('guild-select');
-                guildSelect.innerHTML = '';
-                botGuilds.forEach(g => guildSelect.innerHTML += `<option value="${g.id}">${g.name}</option>`);
-                if (guildSelect.options.length > 0) {
-                    panel.style.display = 'block';
-                    guildSelect.selectedIndex = 0;
-                    guildSelect.dispatchEvent(new Event('change'));
-                } else {
-                    document.getElementById('status').innerText = '❌ 機器人尚未加入任何伺服器';
-                }
-            } catch (err) {
-                console.error(err);
-                document.getElementById('status').innerText = '❌ 無法取得伺服器';
-            }
+        if (!token) return;
+
+        loginBtn.style.display = 'none';
+        panel.style.display = 'block';
+
+        const guildSelect = document.getElementById('guild-select');
+        guildSelect.innerHTML = '';
+
+        let botGuilds = [];
+        try {
+            const res = await fetch('/api/bot/guilds');
+            botGuilds = await res.json();
+        } catch(e) {
+            console.error('取得伺服器失敗', e);
+            document.getElementById('status').innerText = '❌ 無法取得伺服器';
+            return;
         }
+
+        if (botGuilds.length === 0) {
+            document.getElementById('status').innerText = '❌ 機器人尚未加入任何伺服器';
+            return;
+        }
+
+        botGuilds.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.id;
+            opt.textContent = g.name;
+            guildSelect.appendChild(opt);
+        });
+
+        guildSelect.addEventListener('change', async function() {
+            const guildId = this.value;
+            if (!guildId) return;
+            try {
+                const res = await fetch(`/api/servers/${guildId}/info`);
+                const data = await res.json();
+
+                const channelSelect = document.getElementById('channel-select');
+                const supportSelect = document.getElementById('support-role-select');
+                const logSelect = document.getElementById('log-channel-select');
+
+                channelSelect.innerHTML = '';
+                supportSelect.innerHTML = '';
+                logSelect.innerHTML = '';
+                notifySelect.innerHTML = '';
+
+                data.channels.forEach(c => {
+                    channelSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                    logSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                });
+
+                data.roles.forEach(r => {
+                    const roleName = r.name === "@everyone" ? "@everyone" : r.name;
+                    notifySelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
+                    supportSelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
+                });
+
+                // 初始顯示依勾選
+                notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
+
+            } catch(err) {
+                console.error('取得頻道/角色失敗', err);
+                document.getElementById('status').innerText = '❌ 無法取得頻道或角色';
+            }
+        });
+
+        // 觸發第一次載入
+        guildSelect.dispatchEvent(new Event('change'));
+
+    } catch(err) {
+        console.error(err);
     }
-})();
+}
 
-// 伺服器選擇改變時
-document.getElementById('guild-select').addEventListener('change', async function() {
-    const guildId = this.value;
+initPanel();
+
+// 儲存按鈕
+document.getElementById('save-btn').addEventListener('click', async () => {
+    const guildId = document.getElementById('guild-select').value;
     if (!guildId) return;
+    const body = {
+        ticketChannel: document.getElementById('channel-select').value,
+        notifyRole: document.getElementById('notify-role-select').value,
+        supportRole: document.getElementById('support-role-select').value,
+        logChannel: document.getElementById('log-channel-select').value,
+        buttonText: document.getElementById('ticket-button-text').value || "🎫 開啟工單",
+        messageContent: document.getElementById('welcome-message-content').value || "請描述問題...",
+        pingRole: pingCheckbox.checked
+    };
     try {
-        const res = await fetch(`/api/servers/${guildId}/info`);
+        const res = await fetch(`/api/servers/${guildId}/settings`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(body)
+        });
         const data = await res.json();
-
-        const channelSelect = document.getElementById('channel-select');
-        const supportSelect = document.getElementById('support-role-select');
-        const logSelect = document.getElementById('log-channel-select');
-
-        channelSelect.innerHTML = '';
-        notifySelect.innerHTML = '';
-        supportSelect.innerHTML = '';
-        logSelect.innerHTML = '';
-
-        data.channels.forEach(c => {
-            channelSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-            logSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-        });
-
-        data.roles.forEach(r => {
-            const roleName = r.name === "@everyone" ? "@everyone" : r.name;
-            notifySelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
-            supportSelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
-        });
-
-        // 初始顯示依勾選
-        notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
-    } catch (err) {
-       
+        document.getElementById('status').innerText = data.success ? '✅ 設定成功' : '❌ 設定失敗';
+    } catch(err) {
+        console.error(err);
+        document.getElementById('status').innerText = '❌ 儲存設定失敗';
+    }
+});
+</script>
+</body>
+</html>
