@@ -3,7 +3,7 @@ const express = require("express");
 const path = require("path");
 const settingsDB = require("./settingsDB");
 const client = require("./bot"); 
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, roleMention, userMention } = require("discord.js");
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, roleMention } = require("discord.js");
 const app = express();
 
 app.use(express.json());
@@ -50,15 +50,14 @@ app.post("/api/servers/:id/settings", async (req, res) => {
             );
 
             let pingText = "";
-            if (req.body.notifyRole) {
+            if (req.body.pingRole && req.body.notifyRole) {
                 pingText = req.body.notifyRole === "@everyone" ? "@everyone" : roleMention(req.body.notifyRole);
             }
 
             const topText = req.body.topText || "";
 
-            // 發送訊息 (按鈕 + topText + Ping)
             await channel.send({
-                content: `${pingText}\n${topText}\n**自創工單機器人**\n用途：提交建議、提出疑問\n⚠️ 若遇問題請聯繫 ${userMention(process.env.ADMIN_USER_ID)}`,
+                content: `${pingText}\n${topText}`,
                 components: [row]
             });
         }
