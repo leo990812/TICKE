@@ -71,27 +71,22 @@ client.on("interactionCreate", async interaction => {
             new ButtonBuilder().setCustomId("close_ticket").setLabel("🔒 關閉工單").setStyle(ButtonStyle.Danger)
         );
 
-        // 使用者自訂的工單歡迎訊息
-        const welcomeMsg = config.welcomeMessage?.trim();
-        const displayWelcome = welcomeMsg && welcomeMsg.length > 0
-            ? `${welcomeMsg}`
-            : `📩 ${interaction.user} 的工單已建立，支援人員可點擊「接手」開始處理。`;
+        // === 使用者自訂的工單歡迎訊息 ===
+        const welcomeMsg = config.welcomeMessage?.trim() || "📩 工單已建立，支援人員可點擊「接手」開始處理。";
 
-        // 通知管理員/支援人員角色
-        let notifyText = "";
-        if (config.supportRole) {
-            notifyText = `\n${roleMention(config.supportRole)} 有新工單開啟！`;
-        }
+        // === 新增通知 ===
+        const supportMention = config.supportRole ? `<@&${config.supportRole}>` : "";
+        const userMention = `<@${interaction.user.id}>`;
 
         await channel.send({
-            content: `${displayWelcome}${notifyText}`,
+            content: `${userMention} ${supportMention}\n${welcomeMsg}`,
             components: [row]
         });
 
         await interaction.reply({ content: `✅ 工單已建立：${channel}`, ephemeral: true });
     }
 
-    // === 接手、關閉工單邏輯（不變）===
+    // === 接手工單 ===
     if (interaction.customId === "claim_ticket") {
         const member = interaction.member;
         const isSupport = member.roles.cache.has(config.supportRole);
@@ -115,7 +110,7 @@ client.on("interactionCreate", async interaction => {
         await interaction.reply({ content: `✅ 你已接手此工單。`, ephemeral: true });
     }
 
-    // === 關閉確認與保存紀錄 ===（不動）
+    // === 關閉確認 ===
     if (interaction.customId === "close_ticket") {
         const confirmRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("confirm_close").setLabel("✅ 確定關閉").setStyle(ButtonStyle.Danger),
@@ -129,10 +124,12 @@ client.on("interactionCreate", async interaction => {
         });
     }
 
+    // === 取消關閉 ===
     if (interaction.customId === "cancel_close") {
         return interaction.update({ content: "✅ 已取消關閉操作。", components: [] });
     }
 
+    // === 確定關閉工單並保存紀錄 ===
     if (interaction.customId === "confirm_close") {
         await interaction.update({ content: "📝 正在保存工單紀錄...", components: [] });
 
