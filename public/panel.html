@@ -81,6 +81,10 @@ input:checked + .slider:before { transform:translateX(22px); }
   <!-- 紀錄保存頻道選單 -->
   <select id="log-channel-select"></select>
 
+  <!-- 新增按鈕上方文字 -->
+  <label>按鈕上方內文:</label>
+  <input type="text" id="ticket-top-text" placeholder="輸入按鈕上方顯示的文字...">
+
   <label>按鈕文字:</label>
   <input type="text" id="ticket-button-text" placeholder="🎫 開啟工單">
 
@@ -203,8 +207,9 @@ document.getElementById('save-btn').addEventListener('click', async () => {
         notifyRole: pingCheckbox.checked ? document.getElementById('notify-role-select').value : null,
         supportRole: document.getElementById('support-role-select').value,
         logChannel: saveLogCheckbox.checked ? document.getElementById('log-channel-select').value : null,
+        topText: document.getElementById('ticket-top-text').value || "",
         buttonText: document.getElementById('ticket-button-text').value || "🎫 開啟工單",
-        messageContent: document.getElementById('welcome-message-content').value || "請描述問題...",
+        welcomeMessage: document.getElementById('welcome-message-content').value || "請描述問題...",
         pingRole: pingCheckbox.checked,
         saveLog: saveLogCheckbox.checked
     };
