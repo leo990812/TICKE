@@ -16,6 +16,7 @@ body {
   min-height: 100vh;
   padding: 50px 20px;
   position: relative;
+  overflow: hidden;
 }
 
 h1 {
@@ -25,7 +26,7 @@ h1 {
   text-shadow: none;
 }
 
-/* 登入畫面區塊 */
+/* 登入畫面 */
 #login-container {
   display: flex;
   flex-direction: column;
@@ -34,12 +35,6 @@ h1 {
   gap: 14px;
   transition: opacity 0.4s ease, transform 0.3s ease;
   text-align: center;
-}
-
-#login-container p {
-  color: #bdbdfc;
-  font-size: 15px;
-  margin: 0;
 }
 
 #login-btn {
@@ -55,7 +50,6 @@ h1 {
   box-shadow: 0 6px 16px rgba(88,101,242,0.5);
   transition: all 0.25s;
 }
-
 #login-btn:hover {
   background-color: #4752C4;
   transform: scale(1.05);
@@ -66,11 +60,12 @@ h1 {
   position: fixed;
   right: 25px;
   bottom: 25px;
-  width: 65px;
-  height: 65px;
+  width: 60px;
+  height: 60px;
   opacity: 0.9;
   filter: drop-shadow(0 0 10px rgba(88,101,242,0.5));
-  transition: transform 0.3s;
+  transition: transform 0.3s ease;
+  z-index: 100;
 }
 .discord-logo:hover {
   transform: scale(1.1);
@@ -157,13 +152,12 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 <!-- 登入畫面 -->
 <div id="login-container">
-  <p>加入社群</p>
   <button id="login-btn">登入 Discord</button>
 </div>
 
 <!-- Discord logo -->
-<a href="https://discord.gg/wrNZ9hFMT3" target="_blank">
-  <img src="https://cdn.worldvectorlogo.com/logos/discord-icon-svgrepo-com.svg" class="discord-logo" alt="Discord Logo">
+<a href="https://discord.gg/wrNZ9hFMT3" target="_blank" rel="noopener noreferrer">
+  <img src="https://cdn.jsdelivr.net/gh/edent/SuperTinyIcons/images/svg/discord.svg" class="discord-logo" alt="Discord Logo">
 </a>
 
 <!-- 控制面板 -->
@@ -246,7 +240,6 @@ async function initPanel() {
   panel.style.display = 'block';
   inviteBtn.style.display = 'inline-block';
 }
-
 initPanel();
 </script>
 </body>
