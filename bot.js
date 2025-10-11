@@ -20,9 +20,19 @@ const client = new Client({
 
 const TICKET_CATEGORY_NAME = "🎫票口 Ticket";
 
-client.once("ready", () => {
-    console.log(`✅ Bot 已登入 ${client.user.tag}`);
-});
+// 檢查或自動建立伺服器設定
+function ensureServerConfig(guildId) {
+    if (!settingsDB[guildId]) {
+        settingsDB[guildId] = {
+            notifyRole: null,
+            supportRole: null,
+            ticketChannel: null,
+            logChannel: null,
+            welcomeMessage: "📩 歡迎！請描述你的問題"
+        };
+    }
+    return settingsDB[guildId];
+}
 
 // 抓取所有訊息（用於保存紀錄）
 async function fetchAllMessages(channel) {
@@ -40,11 +50,15 @@ async function fetchAllMessages(channel) {
     return messages.reverse();
 }
 
+client.once("ready", () => {
+    console.log(`✅ Bot 已登入 ${client.user.tag}`);
+});
+
 client.on("interactionCreate", async interaction => {
     if (!interaction.isButton()) return;
 
-    const config = settingsDB[interaction.guild.id];
-    if (!config) return interaction.reply({ content: "⚠️ 此伺服器尚未設定工單系統！", ephemeral: true });
+    const guildId = interaction.guild.id;
+    const config = ensureServerConfig(guildId);
 
     // === 開啟工單 ===
     if (interaction.customId === "create_ticket") {
