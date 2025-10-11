@@ -13,7 +13,7 @@ label { display: block; margin: 18px 0 6px; font-weight: bold; font-size: 14px; 
 select, input[type=text], textarea, button { width: 100%; padding: 10px 14px; border-radius: 10px; border: none; margin-bottom: 12px; font-size: 14px; outline: none; transition: all 0.2s; }
 select, input[type=text], textarea { background-color: #1e1e2f; color: #f0f0f0; }
 select:hover, input[type=text]:hover, textarea:hover { background-color: #33334d; }
-textarea { resize: vertical; height: 80px; }
+textarea { resize: vertical; min-height: 100px; }
 button { background-color: #ffcc00; color: #1e1e2f; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(255,204,0,0.4); }
 button:hover { background-color: #e6b800; box-shadow: 0 6px 18px rgba(255,204,0,0.6); }
 #status { margin-top: 15px; text-align: center; font-weight: bold; font-size: 15px; }
@@ -64,13 +64,14 @@ input:checked + .slider:before { transform:translateX(22px); }
   <select id="log-channel-select"></select>
 
   <label>按鈕上方內文:</label>
-  <input type="text" id="ticket-top-text" placeholder="輸入按鈕上方顯示的文字...">
+  <!-- 改為 textarea 保留換行 -->
+  <textarea id="ticket-top-text" placeholder="輸入按鈕上方顯示的文字..." rows="10"></textarea>
 
   <label>按鈕文字:</label>
   <input type="text" id="ticket-button-text" placeholder="🎫 開啟工單">
 
   <label>工單歡迎訊息:</label>
-  <textarea id="welcome-message-content" placeholder="輸入開啟工單後的歡迎文字..."></textarea>
+  <textarea id="welcome-message-content" placeholder="輸入開啟工單後的歡迎文字..." rows="10"></textarea>
 
   <button id="save-btn">發布</button>
   <div id="status"></div>
