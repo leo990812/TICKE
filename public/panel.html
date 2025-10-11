@@ -32,9 +32,10 @@ h1 {
 }
 .panel-container:hover { transform: translateY(-5px); }
 label { display: block; margin: 18px 0 6px; font-weight: bold; font-size: 14px; color: #ffd700; }
-select, input[type=text], button { width: 100%; padding: 10px 14px; border-radius: 10px; border: none; margin-bottom: 12px; font-size: 14px; outline: none; transition: all 0.2s; }
-select, input[type=text] { background-color: #1e1e2f; color: #f0f0f0; }
-select:hover, input[type=text]:hover { background-color: #33334d; }
+select, input[type=text], textarea, button { width: 100%; padding: 10px 14px; border-radius: 10px; border: none; margin-bottom: 12px; font-size: 14px; outline: none; transition: all 0.2s; }
+select, input[type=text], textarea { background-color: #1e1e2f; color: #f0f0f0; }
+select:hover, input[type=text]:hover, textarea:hover { background-color: #33334d; }
+textarea { resize: vertical; height: 80px; }
 button {
     background-color: #ffcc00;
     color: #1e1e2f;
@@ -67,11 +68,14 @@ button:hover { background-color: #e6b800; box-shadow: 0 6px 18px rgba(255,204,0,
   <label>查看工單權限角色:</label>
   <select id="support-role-select"></select>
 
+  <label>紀錄保存頻道:</label>
+  <select id="log-channel-select"></select>
+
   <label>按鈕文字:</label>
   <input type="text" id="ticket-button-text" placeholder="🎫 開啟工單">
 
-  <label>訊息內文:</label>
-  <input type="text" id="ticket-message-content" placeholder="請描述問題...">
+  <label>歡迎訊息內文:</label>
+  <textarea id="welcome-message-content" placeholder="請描述問題..."></textarea>
 
   <button id="save-btn">發布</button>
   <div id="status"></div>
@@ -121,15 +125,22 @@ document.getElementById('guild-select').onchange = async function() {
         const data = await res.json();
 
         const channelSelect = document.getElementById('channel-select');
-        channelSelect.innerHTML = '';
-        data.channels.forEach(c => channelSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`);
-
         const notifySelect = document.getElementById('notify-role-select');
         const supportSelect = document.getElementById('support-role-select');
+        const logSelect = document.getElementById('log-channel-select');
+
+        channelSelect.innerHTML = '';
         notifySelect.innerHTML = '';
         supportSelect.innerHTML = '';
+        logSelect.innerHTML = '';
+
+        data.channels.forEach(c => {
+            channelSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+            logSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+
         data.roles.forEach(r => {
-            const roleName = r.name === "@everyone" ? "@everyone" : r.name; // 修正 @@everyone
+            const roleName = r.name === "@everyone" ? "@everyone" : r.name; 
             notifySelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
             supportSelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
         });
@@ -145,8 +156,9 @@ document.getElementById('save-btn').onclick = async () => {
         ticketChannel: document.getElementById('channel-select').value,
         notifyRole: document.getElementById('notify-role-select').value,
         supportRole: document.getElementById('support-role-select').value,
+        logChannel: document.getElementById('log-channel-select').value,
         buttonText: document.getElementById('ticket-button-text').value || "🎫 開啟工單",
-        messageContent: document.getElementById('ticket-message-content').value || "請描述問題...",
+        welcomeMessage: document.getElementById('welcome-message-content').value || "請描述問題...",
         pingRole: document.getElementById('ping-role').checked
     };
     try {
