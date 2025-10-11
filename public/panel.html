@@ -96,7 +96,9 @@ button:hover {
 }
 
 /* Discord 登入按鈕 */
-#login-btn, #invite-btn {
+#login-btn {
+  width: 100%;
+  max-width: 500px; /* 最大寬度限制 */
   padding: 16px 0;
   font-size: 18px;
   border-radius: 12px;
@@ -108,7 +110,7 @@ button:hover {
   box-shadow: 0 4px 12px rgba(88,101,242,0.5);
   transition: 0.2s;
 }
-#login-btn:hover, #invite-btn:hover {
+#login-btn:hover {
   background-color: #4752C4;
 }
 
@@ -146,7 +148,6 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 #notify-role-select, #log-channel-select { display: none; }
 
-/* 頁尾 */
 .footer {
   margin-top: 40px;
   font-size: 13px;
@@ -154,7 +155,6 @@ input:checked + .slider:before { transform: translateX(22px); }
   text-align: center;
 }
 
-/* Discord logo 懸浮按鈕 */
 .discord-float {
   position: fixed;
   bottom: 25px;
@@ -254,13 +254,11 @@ const notifySelect = document.getElementById('notify-role-select');
 const saveLogCheckbox = document.getElementById('save-log-checkbox');
 const logSelect = document.getElementById('log-channel-select');
 
-// Discord登入
 loginBtn.addEventListener('click', () => {
   const url = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=identify%20guilds`;
   window.location.href = url;
 });
 
-// 邀請機器人按鈕
 inviteBtn.addEventListener('click', () => {
   const guildSelectEl = document.getElementById('guild-select');
   const guildId = guildSelectEl.value;
@@ -269,87 +267,5 @@ inviteBtn.addEventListener('click', () => {
   window.open(inviteUrl, '_blank');
 });
 
-// 開關切換
 pingCheckbox.addEventListener('change', () => {
-  notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
-});
-saveLogCheckbox.addEventListener('change', () => {
-  logSelect.style.display = saveLogCheckbox.checked ? 'inline-block' : 'none';
-});
-
-// 初始化面板
-async function initPanel() {
-  if (!window.location.hash) return;
-  const params = new URLSearchParams(window.location.hash.substring(1));
-  const token = params.get('access_token');
-  if (!token) return;
-
-  loginBtn.style.display = 'none';
-  panel.style.display = 'block';
-
-  const guildSelectEl = document.getElementById('guild-select');
-  guildSelectEl.innerHTML = '';
-
-  let botGuilds = [];
-  try {
-    const res = await fetch('/api/bot/guilds');
-    botGuilds = await res.json();
-  } catch(e) {
-    console.error('取得伺服器失敗', e);
-    document.getElementById('status').innerText = '❌ 無法取得伺服器';
-    return;
-  }
-
-  if (botGuilds.length === 0) {
-    document.getElementById('status').innerText = '❌ 機器人尚未加入任何伺服器';
-    return;
-  }
-
-  botGuilds.forEach(g => {
-    const opt = document.createElement('option');
-    opt.value = g.id;
-    opt.textContent = g.name;
-    guildSelectEl.appendChild(opt);
-  });
-
-  guildSelectEl.addEventListener('change', async function() {
-    const guildId = this.value;
-    if (!guildId) return;
-    try {
-      const res = await fetch(`/api/servers/${guildId}/info`);
-      const data = await res.json();
-
-      const channelSelect = document.getElementById('channel-select');
-      const supportSelect = document.getElementById('support-role-select');
-
-      channelSelect.innerHTML = '';
-      supportSelect.innerHTML = '';
-      notifySelect.innerHTML = '';
-      logSelect.innerHTML = '';
-
-      data.channels.forEach(c => {
-        channelSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-        logSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-      });
-
-      data.roles.forEach(r => {
-        const roleName = r.name === "@everyone" ? "@everyone" : r.name;
-        notifySelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
-        supportSelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
-      });
-
-      notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
-      logSelect.style.display = saveLogCheckbox.checked ? 'inline-block' : 'none';
-    } catch(err) {
-      console.error('取得頻道/角色失敗', err);
-      document.getElementById('status').innerText = '❌ 無法取得頻道或角色';
-    }
-  });
-
-  guildSelectEl.dispatchEvent(new Event('change'));
-}
-
-initPanel();
-</script>
-</body>
-</html>
+  notifySelect.style.display = pingCheckbox.checked ?
