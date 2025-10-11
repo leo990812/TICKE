@@ -5,17 +5,7 @@
 <title>私人小舖工單控制面板</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC&display=swap');
-body {
-    font-family: 'Noto Sans TC', sans-serif;
-    background: linear-gradient(135deg, #1e1e2f, #14142b);
-    color: #f0f0f0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    min-height: 100vh;
-    padding: 50px 20px;
-}
+body { font-family: 'Noto Sans TC', sans-serif; background: linear-gradient(135deg, #1e1e2f, #14142b); color: #f0f0f0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 50px 20px; }
 h1 { color: #ffcc00; font-size: 32px; margin-bottom: 40px; text-shadow: 0 0 8px rgba(255,204,0,0.7); }
 .panel-container { background: #2c2c3e; padding: 35px 25px; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); width: 420px; transition: transform 0.2s; }
 .panel-container:hover { transform: translateY(-5px); }
@@ -29,16 +19,12 @@ button:hover { background-color: #e6b800; box-shadow: 0 6px 18px rgba(255,204,0,
 #status { margin-top: 15px; text-align: center; font-weight: bold; font-size: 15px; }
 #login-btn { padding: 12px 20px; font-size: 16px; border-radius: 12px; border: none; background-color: #7289da; color: #fff; cursor: pointer; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(114,137,218,0.5); transition: 0.2s; }
 #login-btn:hover { background-color: #5b6eae; }
-
-/* 活潑開關 */
 .switch { position: relative; display: inline-block; width: 48px; height: 26px; margin-right: 10px; vertical-align: middle; }
 .switch input { display: none; }
 .slider { position: absolute; cursor: pointer; background-color: #ccc; border-radius: 26px; top:0; left:0; right:0; bottom:0; transition:0.4s; }
 .slider:before { position:absolute; content:""; height:22px; width:22px; left:2px; bottom:2px; background-color:white; border-radius:50%; transition:0.4s; }
 input:checked + .slider { background-color:#ffcc00; }
 input:checked + .slider:before { transform:translateX(22px); }
-
-/* 選單初始隱藏 */
 #notify-role-select, #log-channel-select { display:none; }
 </style>
 </head>
@@ -54,7 +40,6 @@ input:checked + .slider:before { transform:translateX(22px); }
   <label>發送頻道:</label>
   <select id="channel-select"></select>
 
-  <!-- Ping 通知角色開關 -->
   <label>
     <span class="switch">
       <input type="checkbox" id="ping-role">
@@ -63,13 +48,11 @@ input:checked + .slider:before { transform:translateX(22px); }
     Ping 通知角色
   </label>
 
-  <!-- 角色選單 -->
   <select id="notify-role-select"></select>
 
   <label>查看工單權限角色:</label>
   <select id="support-role-select"></select>
 
-  <!-- 保存紀錄開關 -->
   <label>
     <span class="switch">
       <input type="checkbox" id="save-log-checkbox">
@@ -78,10 +61,8 @@ input:checked + .slider:before { transform:translateX(22px); }
     保存工單紀錄
   </label>
 
-  <!-- 紀錄保存頻道選單 -->
   <select id="log-channel-select"></select>
 
-  <!-- 新增按鈕上方文字 -->
   <label>按鈕上方內文:</label>
   <input type="text" id="ticket-top-text" placeholder="輸入按鈕上方顯示的文字...">
 
@@ -105,23 +86,19 @@ const notifySelect = document.getElementById('notify-role-select');
 const saveLogCheckbox = document.getElementById('save-log-checkbox');
 const logSelect = document.getElementById('log-channel-select');
 
-// 登入按鈕
 loginBtn.addEventListener('click', () => {
     const url = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=identify`;
     window.location.href = url;
 });
 
-// 控制 Ping 角色選單顯示
 pingCheckbox.addEventListener('change', () => {
     notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
 });
 
-// 控制紀錄保存選單顯示
 saveLogCheckbox.addEventListener('change', () => {
     logSelect.style.display = saveLogCheckbox.checked ? 'inline-block' : 'none';
 });
 
-// 初始化函式
 async function initPanel() {
     if (!window.location.hash) return;
     const params = new URLSearchParams(window.location.hash.substring(1));
@@ -182,7 +159,6 @@ async function initPanel() {
                 supportSelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
             });
 
-            // 初始顯示依勾選
             notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
             logSelect.style.display = saveLogCheckbox.checked ? 'inline-block' : 'none';
 
@@ -197,7 +173,6 @@ async function initPanel() {
 
 initPanel();
 
-// 儲存按鈕
 document.getElementById('save-btn').addEventListener('click', async () => {
     const guildId = document.getElementById('guild-select').value;
     if (!guildId) return;
@@ -211,22 +186,4 @@ document.getElementById('save-btn').addEventListener('click', async () => {
         buttonText: document.getElementById('ticket-button-text').value || "🎫 開啟工單",
         welcomeMessage: document.getElementById('welcome-message-content').value || "請描述問題...",
         pingRole: pingCheckbox.checked,
-        saveLog: saveLogCheckbox.checked
-    };
-
-    try {
-        const res = await fetch(`/api/servers/${guildId}/settings`, {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify(body)
-        });
-        const data = await res.json();
-        document.getElementById('status').innerText = data.success ? '✅ 設定成功' : '❌ 設定失敗';
-    } catch(err) {
-        console.error(err);
-        document.getElementById('status').innerText = '❌ 儲存設定失敗';
-    }
-});
-</script>
-</body>
-</html>
+        saveLog: saveLog
