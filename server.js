@@ -37,6 +37,7 @@ app.get("/api/servers/:id/info", (req, res) => {
 
 // 更新伺服器設定並發送按鈕訊息
 app.post("/api/servers/:id/settings", async (req, res) => {
+    // 存入設定，包括新增 logChannel 與 welcomeMessage
     settingsDB[req.params.id] = req.body;
     const guild = client.guilds.cache.get(req.params.id);
 
@@ -60,7 +61,7 @@ app.post("/api/servers/:id/settings", async (req, res) => {
             }
 
             await channel.send({
-                content: `${pingText}\n${req.body.messageContent || "**自創工單機器人**\n用途：提交建議、提出疑問"}\n⚠️ 若遇問題請聯繫 ${userMention(process.env.ADMIN_USER_ID)}`,
+                content: `${pingText}\n${req.body.welcomeMessage || "**自創工單機器人**\n用途：提交建議、提出疑問"}\n⚠️ 若遇問題請聯繫 ${userMention(process.env.ADMIN_USER_ID)}`,
                 components: [row]
             });
         }
