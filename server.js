@@ -49,16 +49,31 @@ app.post("/api/servers/:id/settings", async (req, res) => {
                     .setStyle(ButtonStyle.Primary)
             );
 
-            // 處理按鈕上方內文
-            const topText = req.body.topText?.trim() || "您的票口已開啟";
-            const userMention = req.body.pingUser ? `<@${req.body.pingUser}>` : "";
-            const supportMention = req.body.notifyRole ? `<@&${req.body.notifyRole}>` : "";
+            // === 按鈕上方訊息（跟工單歡迎訊息完全一致） ===
+            // 可直接換行，保留排版
+            const topText = req.body.topText?.trim() || 
+`📢 **檢舉系統** 📢
 
-            // 支援 Shift+Enter 換行，直接使用 \n
-            const messageContent = `${userMention}\n${topText}\n${supportMention}`;
+若您發現任何成員有 **脫序行為** 或 **違反社群規範**，
+請透過下方按鈕開啟工單並填寫檢舉內容。
+
+🔖 **請依以下格式提供完整資訊：**
+
+* **檢舉人：**
+* **被檢舉人：**
+* **事由：**
+* **證據：**
+* **備註：** (非必要)
+
+為確保處理效率，請務必附上清楚的證據（如截圖、訊息連結）。
+本社群將依規範進行審核與處置，感謝您的配合與協助。`;
+
+            // 如果有要 @ 管理角色或 @ 使用者，也放在最上方
+            const userMention = req.body.pingUser ? `<@${req.body.pingUser}>\n` : "";
+            const supportMention = req.body.notifyRole ? `<@&${req.body.notifyRole}>\n` : "";
 
             await channel.send({
-                content: messageContent,
+                content: `${userMention}${topText}${supportMention}`,
                 components: [row]
             });
         }
