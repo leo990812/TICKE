@@ -54,9 +54,7 @@ client.on("interactionCreate", async interaction => {
         if (!category) category = await interaction.guild.channels.create({ name: TICKET_CATEGORY_NAME, type: 4 });
 
         const existing = interaction.guild.channels.cache.find(c => c.topic === `ticketOwner:${interaction.user.id}`);
-        if (existing) {
-            return interaction.reply({ content: `⚠️ 你已經有開啟中的工單：${existing}`, ephemeral: true });
-        }
+        if (existing) return interaction.reply({ content: `⚠️ 你已經有開啟中的工單：${existing}`, ephemeral: true });
 
         const channel = await interaction.guild.channels.create({
             name: `工單-${interaction.user.username}`,
@@ -89,9 +87,7 @@ client.on("interactionCreate", async interaction => {
         const isSupport = member.roles.cache.has(config.supportRole);
         const isAdmin = member.permissions.has(PermissionFlagsBits.ManageChannels);
 
-        if (!isSupport && !isAdmin) {
-            return interaction.reply({ content: "❌ 只有支援人員或管理員可接手工單。", ephemeral: true });
-        }
+        if (!isSupport && !isAdmin) return interaction.reply({ content: "❌ 只有支援人員或管理員可接手工單。", ephemeral: true });
 
         const msg = await interaction.channel.messages.fetch(interaction.message.id);
         const newRow = new ActionRowBuilder().addComponents(
@@ -138,12 +134,9 @@ client.on("interactionCreate", async interaction => {
         const isSupport = interaction.member.roles.cache.has(config.supportRole);
         const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels);
 
-        if (!isTicketOwner && !isSupport && !isAdmin) {
-            return interaction.followUp({ content: "❌ 你沒有權限關閉此工單。", ephemeral: true });
-        }
+        if (!isTicketOwner && !isSupport && !isAdmin) return interaction.followUp({ content: "❌ 你沒有權限關閉此工單。", ephemeral: true });
 
         try {
-            // 取得所有訊息
             const messages = await fetchAllMessages(interaction.channel);
             const logs = messages.map(m => `[${m.createdAt.toLocaleString()}] ${m.author.tag}: ${m.content || "(附件/無內容)"}`).join("\n");
 
