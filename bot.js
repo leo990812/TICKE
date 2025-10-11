@@ -49,21 +49,31 @@ client.on("interactionCreate", async interaction => {
     // === 開啟工單 ===
     if (interaction.customId === "create_ticket") {
         let category = interaction.guild.channels.cache.find(c => c.type === 4 && c.name === TICKET_CATEGORY_NAME);
-        if (!category) category = await interaction.guild.channels.create({ name: TICKET_CATEGORY_NAME, type: 4 });
+        if (!category) {
+            category = await interaction.guild.channels.create({
+                name: TICKET_CATEGORY_NAME,
+                type: 4
+            });
+        }
 
         const existing = interaction.guild.channels.cache.find(c => c.topic === `ticketOwner:${interaction.user.id}`);
         if (existing) return interaction.reply({ content: `⚠️ 你已經有開啟中的工單：${existing}`, ephemeral: true });
+
+        const everyoneRole = interaction.guild.roles.everyone;
+        const supportRole = config.supportRole ? interaction.guild.roles.cache.get(config.supportRole) : null;
+
+        const permissionOverwrites = [
+            { id: everyoneRole.id, deny: [PermissionFlagsBits.ViewChannel] },
+            { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
+        ];
+        if (supportRole) permissionOverwrites.push({ id: supportRole.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] });
 
         const channel = await interaction.guild.channels.create({
             name: `工單-${interaction.user.username}`,
             type: 0,
             topic: `ticketOwner:${interaction.user.id}`,
             parent: category.id,
-            permissionOverwrites: [
-                { id: interaction.guild.roles.everyone, deny: [PermissionFlagsBits.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-                { id: config.supportRole, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
-            ]
+            permissionOverwrites
         });
 
         const row = new ActionRowBuilder().addComponents(
@@ -71,26 +81,19 @@ client.on("interactionCreate", async interaction => {
             new ButtonBuilder().setCustomId("close_ticket").setLabel("🔒 關閉工單").setStyle(ButtonStyle.Danger)
         );
 
-        // 使用者自訂的工單歡迎訊息
         const welcomeMsg = config.welcomeMessage?.trim() || "您的票口已開啟";
-
-        // 排列順序：@開啟者 -> 歡迎訊息 -> @支援人員
         const userMention = `<@${interaction.user.id}>`;
-        const supportMention = config.supportRole ? `<@&${config.supportRole}>` : "";
+        const supportMention = supportRole ? `<@&${supportRole.id}>` : "";
         const messageContent = `${userMention}\n${welcomeMsg}\n${supportMention}`;
 
-        await channel.send({
-            content: messageContent,
-            components: [row]
-        });
-
+        await channel.send({ content: messageContent, components: [row] });
         await interaction.reply({ content: `✅ 工單已建立：${channel}`, ephemeral: true });
     }
 
     // === 接手工單 ===
     if (interaction.customId === "claim_ticket") {
         const member = interaction.member;
-        const isSupport = member.roles.cache.has(config.supportRole);
+        const isSupport = config.supportRole ? member.roles.cache.has(config.supportRole) : false;
         const isAdmin = member.permissions.has(PermissionFlagsBits.ManageChannels);
 
         if (!isSupport && !isAdmin)
@@ -136,8 +139,9 @@ client.on("interactionCreate", async interaction => {
         const ticketOwner = topic?.startsWith("ticketOwner:") ? topic.split(":")[1] : null;
 
         const isTicketOwner = interaction.user.id === ticketOwner;
-        const isSupport = interaction.member.roles.cache.has(config.supportRole);
-        const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.ManageChannels);
+        const member = interaction.member;
+        const isSupport = config.supportRole ? member.roles.cache.has(config.supportRole) : false;
+        const isAdmin = member.permissions.has(PermissionFlagsBits.ManageChannels);
 
         if (!isTicketOwner && !isSupport && !isAdmin)
             return interaction.followUp({ content: "❌ 你沒有權限關閉此工單。", ephemeral: true });
