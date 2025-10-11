@@ -47,6 +47,37 @@ button:hover { background-color: #e6b800; box-shadow: 0 6px 18px rgba(255,204,0,
 #status { margin-top: 15px; text-align: center; font-weight: bold; font-size: 15px; }
 #login-btn { padding: 12px 20px; font-size: 16px; border-radius: 12px; border: none; background-color: #7289da; color: #fff; cursor: pointer; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(114,137,218,0.5); transition: 0.2s; }
 #login-btn:hover { background-color: #5b6eae; }
+
+/* 活潑開關樣式 */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  margin-right: 10px;
+}
+.switch input { display: none; }
+.slider {
+  position: absolute;
+  cursor: pointer;
+  background-color: #ccc;
+  border-radius: 26px;
+  top: 0; left: 0; right: 0; bottom: 0;
+  transition: 0.4s;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.4s;
+}
+input:checked + .slider { background-color: #ffcc00; }
+input:checked + .slider:before { transform: translateX(22px); }
 </style>
 </head>
 <body>
@@ -61,9 +92,17 @@ button:hover { background-color: #e6b800; box-shadow: 0 6px 18px rgba(255,204,0,
   <label>發送頻道:</label>
   <select id="channel-select"></select>
 
-  <label>通知角色:</label>
-  <select id="notify-role-select"></select>
-  <label><input type="checkbox" id="ping-role" checked> Ping 通知角色</label>
+  <!-- Ping 通知角色開關 -->
+  <label>
+    <span class="switch">
+      <input type="checkbox" id="ping-role" checked>
+      <span class="slider"></span>
+    </span>
+    Ping 通知角色
+  </label>
+
+  <!-- 角色選單，預設顯示或隱藏 -->
+  <select id="notify-role-select" style="display:inline-block; margin-bottom:12px;"></select>
 
   <label>查看工單權限角色:</label>
   <select id="support-role-select"></select>
@@ -89,6 +128,13 @@ document.getElementById('login-btn').onclick = () => {
     const url = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=identify`;
     window.location.href = url;
 };
+
+// 勾選開關控制角色選單顯示
+const pingCheckbox = document.getElementById('ping-role');
+const notifySelect = document.getElementById('notify-role-select');
+pingCheckbox.addEventListener('change', () => {
+    notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
+});
 
 window.onload = async () => {
     if (window.location.hash) {
@@ -125,7 +171,6 @@ document.getElementById('guild-select').onchange = async function() {
         const data = await res.json();
 
         const channelSelect = document.getElementById('channel-select');
-        const notifySelect = document.getElementById('notify-role-select');
         const supportSelect = document.getElementById('support-role-select');
         const logSelect = document.getElementById('log-channel-select');
 
@@ -140,10 +185,13 @@ document.getElementById('guild-select').onchange = async function() {
         });
 
         data.roles.forEach(r => {
-            const roleName = r.name === "@everyone" ? "@everyone" : r.name; 
+            const roleName = r.name === "@everyone" ? "@everyone" : r.name;
             notifySelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
             supportSelect.innerHTML += `<option value="${r.id}">${roleName}</option>`;
         });
+
+        // 初始顯示依勾選
+        notifySelect.style.display = pingCheckbox.checked ? 'inline-block' : 'none';
     } catch (err) {
         console.error(err);
         document.getElementById('status').innerText = '❌ 無法取得頻道或角色';
@@ -154,26 +202,5 @@ document.getElementById('save-btn').onclick = async () => {
     const guildId = document.getElementById('guild-select').value;
     const body = {
         ticketChannel: document.getElementById('channel-select').value,
-        notifyRole: document.getElementById('notify-role-select').value,
-        supportRole: document.getElementById('support-role-select').value,
-        logChannel: document.getElementById('log-channel-select').value,
-        buttonText: document.getElementById('ticket-button-text').value || "🎫 開啟工單",
-        welcomeMessage: document.getElementById('welcome-message-content').value || "請描述問題...",
-        pingRole: document.getElementById('ping-role').checked
-    };
-    try {
-        const res = await fetch(`/api/servers/${guildId}/settings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-        const data = await res.json();
-        document.getElementById('status').innerText = data.success ? '✅ 設定成功' : '❌ 設定失敗';
-    } catch (err) {
-        console.error(err);
-        document.getElementById('status').innerText = '❌ 儲存設定失敗';
-    }
-};
-</script>
-</body>
-</html>
+        notifyRole: notifySelect.style.display === 'inline-block' ? notifySelect.value : null,
+       
