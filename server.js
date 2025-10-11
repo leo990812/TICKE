@@ -2,8 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const settingsDB = require("./settingsDB");
-const client = require("./bot");
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, roleMention, userMention } = require("discord.js");
+const client = require("./bot"); 
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const app = express();
 
 app.use(express.json());
@@ -25,9 +25,7 @@ app.get("/api/servers/:id/info", (req, res) => {
     const guild = client.guilds.cache.get(req.params.id);
     if (!guild) return res.json({ channels: [], roles: [] });
 
-    const channels = guild.channels.cache
-        .filter(c => c.type === 0)
-        .map(c => ({ id: c.id, name: c.name }));
+    const channels = guild.channels.cache.filter(c => c.type === 0).map(c => ({ id: c.id, name: c.name }));
     const roles = guild.roles.cache.map(r => ({ id: r.id, name: r.name }));
 
     const everyoneRoleIndex = roles.findIndex(r => r.name === "@everyone");
@@ -51,24 +49,16 @@ app.post("/api/servers/:id/settings", async (req, res) => {
                     .setStyle(ButtonStyle.Primary)
             );
 
-            // Ping 通知角色（如果有設定）
-            let pingText = "";
-            if (req.body.notifyRole) {
-                pingText = req.body.notifyRole === "@everyone"
-                    ? "@everyone"
-                    : roleMention(req.body.notifyRole);
-            }
+            // 處理按鈕上方內文
+            const topText = req.body.topText?.trim() || "您的票口已開啟";
+            const userMention = req.body.pingUser ? `<@${req.body.pingUser}>` : "";
+            const supportMention = req.body.notifyRole ? `<@&${req.body.notifyRole}>` : "";
 
-            // 使用者自訂按鈕上方文字
-            const topText = req.body.topText?.trim();
-
-            // 若使用者沒輸入 topText，就使用預設說明
-            const displayText = topText && topText.length > 0
-                ? `${pingText}\n${topText}`
-                : `${pingText}\n**自創工單機器人**\n用途：提交建議、提出疑問\n⚠️ 若遇問題請聯繫 ${userMention(process.env.ADMIN_USER_ID)}`;
+            // 支援 Shift+Enter 換行，直接使用 \n
+            const messageContent = `${userMention}\n${topText}\n${supportMention}`;
 
             await channel.send({
-                content: displayText,
+                content: messageContent,
                 components: [row]
             });
         }
@@ -80,6 +70,4 @@ app.post("/api/servers/:id/settings", async (req, res) => {
 // 基本頁面
 app.get("/", (req, res) => res.send("Bot 控制面板在線"));
 
-app.listen(process.env.PORT || 3000, () =>
-    console.log("🌐 Web server started")
-);
+app.listen(process.env.PORT || 3000, () => console.log("🌐 Web server started"));
