@@ -58,6 +58,7 @@ client.on("interactionCreate", async interaction => {
     const guildId = interaction.guild.id;
     const config = ensureServerConfig(guildId);
 
+    // 🎫 開啟工單
     if (interaction.customId === "create_ticket") {
         let category = interaction.guild.channels.cache.find(c => c.type === 4 && c.name === TICKET_CATEGORY_NAME);
         if (!category) {
@@ -102,6 +103,7 @@ client.on("interactionCreate", async interaction => {
         await interaction.reply({ content: `✅ 工單已建立：${channel}`, ephemeral: true });
     }
 
+    // 🧾 接手工單
     if (interaction.customId === "claim_ticket") {
         const member = interaction.member;
         const config = ensureServerConfig(interaction.guild.id);
@@ -126,6 +128,7 @@ client.on("interactionCreate", async interaction => {
         await interaction.reply({ content: `✅ 你已接手此工單。`, ephemeral: true });
     }
 
+    // 🔒 關閉工單
     if (interaction.customId === "close_ticket") {
         const confirmRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("confirm_close").setLabel("✅ 確定關閉").setStyle(ButtonStyle.Danger),
@@ -143,6 +146,7 @@ client.on("interactionCreate", async interaction => {
         return interaction.update({ content: "✅ 已取消關閉操作。", components: [] });
     }
 
+    // ✅ 確認關閉工單
     if (interaction.customId === "confirm_close") {
         await interaction.update({ content: "📝 正在保存工單紀錄...", components: [] });
 
