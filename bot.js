@@ -39,7 +39,6 @@ async function fetchAllMessages(channel) {
     while (true) {
         const options = { limit: 100 };
         if (lastId) options.before = lastId;
-
         const fetched = await channel.messages.fetch(options);
         messages = messages.concat(Array.from(fetched.values()));
         if (fetched.size !== 100) break;
@@ -58,7 +57,7 @@ client.on("interactionCreate", async interaction => {
     const guildId = interaction.guild.id;
     const config = ensureServerConfig(guildId);
 
-    // 🎫 開啟工單
+    // 建立票口
     if (interaction.customId === "create_ticket") {
         let category = interaction.guild.channels.cache.find(c => c.type === 4 && c.name === TICKET_CATEGORY_NAME);
         if (!category) {
@@ -103,7 +102,7 @@ client.on("interactionCreate", async interaction => {
         await interaction.reply({ content: `✅ 工單已建立：${channel}`, ephemeral: true });
     }
 
-    // 🧾 接手工單
+    // 接手工單
     if (interaction.customId === "claim_ticket") {
         const member = interaction.member;
         const config = ensureServerConfig(interaction.guild.id);
@@ -128,7 +127,7 @@ client.on("interactionCreate", async interaction => {
         await interaction.reply({ content: `✅ 你已接手此工單。`, ephemeral: true });
     }
 
-    // 🔒 關閉工單
+    // 關閉工單確認
     if (interaction.customId === "close_ticket") {
         const confirmRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("confirm_close").setLabel("✅ 確定關閉").setStyle(ButtonStyle.Danger),
@@ -142,24 +141,24 @@ client.on("interactionCreate", async interaction => {
         });
     }
 
+    // 取消關閉
     if (interaction.customId === "cancel_close") {
         return interaction.update({ content: "✅ 已取消關閉操作。", components: [] });
     }
 
-    // ✅ 確認關閉工單
+    // 確認關閉
     if (interaction.customId === "confirm_close") {
         await interaction.update({ content: "📝 正在保存工單紀錄...", components: [] });
 
         const topic = interaction.channel.topic;
         const ticketOwner = topic?.startsWith("ticketOwner:") ? topic.split(":")[1] : null;
 
-        const isTicketOwner = interaction.user.id === ticketOwner;
         const member = interaction.member;
         const config = ensureServerConfig(interaction.guild.id);
         const isSupport = config.supportRole ? member.roles.cache.has(config.supportRole) : false;
         const isAdmin = member.permissions.has(PermissionFlagsBits.ManageChannels);
 
-        if (!isTicketOwner && !isSupport && !isAdmin)
+        if (interaction.user.id !== ticketOwner && !isSupport && !isAdmin)
             return interaction.followUp({ content: "❌ 你沒有權限關閉此工單。", ephemeral: true });
 
         try {
@@ -184,7 +183,6 @@ client.on("interactionCreate", async interaction => {
 
             await interaction.followUp({ content: "✅ 工單紀錄已保存並上傳，頻道將在 3 秒後刪除。", ephemeral: true });
             setTimeout(() => interaction.channel.delete().catch(() => {}), 3000);
-
         } catch (err) {
             console.error("❌ 保存紀錄錯誤：", err);
             await interaction.followUp({ content: "⚠️ 無法保存紀錄，請查看主控台錯誤。", ephemeral: true });
