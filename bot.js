@@ -1,4 +1,3 @@
-// bot.js
 require("dotenv").config();
 const {
     Client, GatewayIntentBits, Partials,
@@ -21,7 +20,6 @@ const client = new Client({
 
 const TICKET_CATEGORY_NAME = "🎫票口 Ticket";
 
-// 檢查或自動建立伺服器設定
 function ensureServerConfig(guildId) {
     if (!settingsDB[guildId]) {
         settingsDB[guildId] = {
@@ -29,13 +27,12 @@ function ensureServerConfig(guildId) {
             supportRole: null,
             ticketChannel: null,
             logChannel: null,
-            welcomeMessage: "您的票口已開啟，請在此描述問題。"
+            welcomeMessage: "📩 歡迎！請描述你的問題"
         };
     }
     return settingsDB[guildId];
 }
 
-// 抓取所有訊息（用於保存紀錄）
 async function fetchAllMessages(channel) {
     let messages = [];
     let lastId;
@@ -61,7 +58,6 @@ client.on("interactionCreate", async interaction => {
     const guildId = interaction.guild.id;
     const config = ensureServerConfig(guildId);
 
-    // === 開啟工單 ===
     if (interaction.customId === "create_ticket") {
         let category = interaction.guild.channels.cache.find(c => c.type === 4 && c.name === TICKET_CATEGORY_NAME);
         if (!category) {
@@ -96,27 +92,19 @@ client.on("interactionCreate", async interaction => {
             new ButtonBuilder().setCustomId("close_ticket").setLabel("🔒 關閉工單").setStyle(ButtonStyle.Danger)
         );
 
-        // 取得歡迎訊息（可包含換行）
-        const welcomeMsg = (config.welcomeMessage || "").trim() || "您的票口已開啟";
+        const welcomeMsg = config.welcomeMessage?.trim() || "📩 您的票口已開啟";
         const userMention = `<@${interaction.user.id}>`;
         const supportMention = supportRole ? `<@&${supportRole.id}>` : "";
 
-        // 排列順序：@開啟者（單獨一行） -> 歡迎訊息 -> @支援人員（單獨一行）
-        // 如果歡迎訊息本身已包含 mention，就不重複加 supportMention（但通常會單獨加）
-        const parts = [];
-        parts.push(userMention);           // @ 開啟者
-        parts.push(welcomeMsg);            // 歡迎訊息（多行可直接放）
-        if (supportMention) parts.push(supportMention); // @ 支援角色
-
-        const messageContent = parts.join("\n");
+        const messageContent = `${userMention}\n${welcomeMsg}\n${supportMention}`;
 
         await channel.send({ content: messageContent, components: [row] });
         await interaction.reply({ content: `✅ 工單已建立：${channel}`, ephemeral: true });
     }
 
-    // === 接手工單 ===
     if (interaction.customId === "claim_ticket") {
         const member = interaction.member;
+        const config = ensureServerConfig(interaction.guild.id);
         const isSupport = config.supportRole ? member.roles.cache.has(config.supportRole) : false;
         const isAdmin = member.permissions.has(PermissionFlagsBits.ManageChannels);
 
@@ -138,7 +126,6 @@ client.on("interactionCreate", async interaction => {
         await interaction.reply({ content: `✅ 你已接手此工單。`, ephemeral: true });
     }
 
-    // === 關閉確認 ===
     if (interaction.customId === "close_ticket") {
         const confirmRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("confirm_close").setLabel("✅ 確定關閉").setStyle(ButtonStyle.Danger),
@@ -164,6 +151,7 @@ client.on("interactionCreate", async interaction => {
 
         const isTicketOwner = interaction.user.id === ticketOwner;
         const member = interaction.member;
+        const config = ensureServerConfig(interaction.guild.id);
         const isSupport = config.supportRole ? member.roles.cache.has(config.supportRole) : false;
         const isAdmin = member.permissions.has(PermissionFlagsBits.ManageChannels);
 
