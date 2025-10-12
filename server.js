@@ -1,8 +1,9 @@
+// server.js
 require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const settingsDB = require("./settingsDB");
-const client = require("./bot"); 
+const client = require("./bot");
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const app = express();
 
@@ -36,50 +37,60 @@ app.get("/api/servers/:id/info", (req, res) => {
 
 // 更新伺服器設定並發送按鈕訊息
 app.post("/api/servers/:id/settings", async (req, res) => {
-    settingsDB[req.params.id] = req.body;
-    const guild = client.guilds.cache.get(req.params.id);
+    try {
+        // 將前端送來的設定存入 settingsDB（包含 welcomeMessage/topText/buttonText 等）
+        settingsDB[req.params.id] = req.body;
 
-    if (guild) {
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: "找不到該伺服器" });
+
         const channel = guild.channels.cache.get(req.body.ticketChannel);
-        if (channel) {
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId("create_ticket")
-                    .setLabel(req.body.buttonText || "🎫 開啟工單")
-                    .setStyle(ButtonStyle.Primary)
-            );
+        if (!channel) return res.status(404).json({ error: "找不到設定的頻道" });
 
-            // === 按鈕上方訊息（跟工單歡迎訊息完全一致） ===
-            // 可直接換行，保留排版
-            const topText = req.body.topText?.trim() || 
-`📢 **檢舉系統** 📢
+        // 建按鈕
+        const buttonText = (req.body.buttonText || "🎫 開啟工單").toString().slice(0, 80);
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("create_ticket")
+                .setLabel(buttonText)
+                .setStyle(ButtonStyle.Primary)
+        );
 
-若您發現任何成員有 **脫序行為** 或 **違反社群規範**，
-請透過下方按鈕開啟工單並填寫檢舉內容。
+        // topText（按鈕上方內文） 與 welcomeMessage（開啟工單後訊息）儲存在 settingsDB
+        const topText = (req.body.topText || "").toString().trim();
+        const welcomeMessage = (req.body.welcomeMessage || "").toString().trim();
 
-🔖 **請依以下格式提供完整資訊：**
+        // 若有 notifyRole（想要 ping 的角色），組成 mention
+        const supportMention = req.body.supportRole ? `<@&${req.body.supportRole}>\n` : "";
 
-* **檢舉人：**
-* **被檢舉人：**
-* **事由：**
-* **證據：**
-* **備註：** (非必要)
+        // 若前端有想要先 mention 某使用者（通常不需要），支援 pingUser
+        const userMention = req.body.pingUser ? `<@${req.body.pingUser}>\n` : "";
 
-為確保處理效率，請務必附上清楚的證據（如截圖、訊息連結）。
-本社群將依規範進行審核與處置，感謝您的配合與協助。`;
-
-            // 如果有要 @ 管理角色或 @ 使用者，也放在最上方
-            const userMention = req.body.pingUser ? `<@${req.body.pingUser}>\n` : "";
-            const supportMention = req.body.notifyRole ? `<@&${req.body.notifyRole}>\n` : "";
-
-            await channel.send({
-                content: `${userMention}${topText}${supportMention}`,
-                components: [row]
-            });
+        // messageToSend：順序 userMention (可選) -> topText（若有） or default topText -> supportMention (可選)
+        // 我把 topText 放中間（按鈕上方內文），並保留換行格式
+        let messageToSend = "";
+        if (userMention) messageToSend += userMention;
+        if (topText) {
+            messageToSend += `${topText}\n`;
+        } else {
+            // 若沒提供 topText，放一個簡短預設提示
+            messageToSend += `**自創工單機器人**\n用途：提交建議、提出疑問\n`;
         }
-    }
+        if (supportMention) messageToSend += supportMention;
 
-    res.json({ success: true });
+        // 最多 2000 字
+        if (messageToSend.length > 2000) messageToSend = messageToSend.slice(0, 1990) + "…";
+
+        await channel.send({
+            content: messageToSend,
+            components: [row]
+        });
+
+        return res.json({ success: true });
+    } catch (err) {
+        console.error("❌ 發送票口訊息錯誤:", err);
+        return res.status(500).json({ error: "無法發送訊息，請檢查伺服器設定或權限。" });
+    }
 });
 
 // 基本頁面
