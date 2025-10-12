@@ -38,7 +38,7 @@ app.get("/api/servers/:id/info", (req, res) => {
 // 更新伺服器設定並發送按鈕訊息
 app.post("/api/servers/:id/settings", async (req, res) => {
     try {
-        // 將前端送來的設定存入 settingsDB（包含 welcomeMessage/topText/buttonText 等）
+        // 存設定
         settingsDB[req.params.id] = req.body;
 
         const guild = client.guilds.cache.get(req.params.id);
@@ -47,7 +47,6 @@ app.post("/api/servers/:id/settings", async (req, res) => {
         const channel = guild.channels.cache.get(req.body.ticketChannel);
         if (!channel) return res.status(404).json({ error: "找不到設定的頻道" });
 
-        // 建按鈕
         const buttonText = (req.body.buttonText || "🎫 開啟工單").toString().slice(0, 80);
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -56,31 +55,28 @@ app.post("/api/servers/:id/settings", async (req, res) => {
                 .setStyle(ButtonStyle.Primary)
         );
 
-        // topText（按鈕上方內文） 與 welcomeMessage（開啟工單後訊息）儲存在 settingsDB
         const topText = (req.body.topText || "").toString().trim();
         const welcomeMessage = (req.body.welcomeMessage || "").toString().trim();
 
-        // 若有 notifyRole（想要 ping 的角色），組成 mention
-        const supportMention = req.body.supportRole ? `<@&${req.body.supportRole}>\n` : "";
+        // ✅ 是否要 ping 通知角色（由控制面板決定）
+        const shouldPingNotify = !!req.body.pingRole; // 前端若勾選「Ping 通知角色」會傳 true
+        const notifyRoleId = req.body.notifyRole; // 使用者在前端選的角色ID
+        const supportRoleId = req.body.supportRole; // 管理員角色ID（之後開票口用）
 
-        // 若前端有想要先 mention 某使用者（通常不需要），支援 pingUser
-        const userMention = req.body.pingUser ? `<@${req.body.pingUser}>\n` : "";
-
-        // messageToSend：順序 userMention (可選) -> topText（若有） or default topText -> supportMention (可選)
-        // 我把 topText 放中間（按鈕上方內文），並保留換行格式
         let messageToSend = "";
-        if (userMention) messageToSend += userMention;
+
+        if (shouldPingNotify && notifyRoleId) {
+            messageToSend += `<@&${notifyRoleId}>\n`; // ✅ ping 通知角色
+        }
+
+        // 按鈕上方文字
         if (topText) {
             messageToSend += `${topText}\n`;
         } else {
-            // 若沒提供 topText，放一個簡短預設提示
             messageToSend += `**自創工單機器人**\n用途：提交建議、提出疑問\n`;
         }
-        if (supportMention) messageToSend += supportMention;
 
-        // 最多 2000 字
-        if (messageToSend.length > 2000) messageToSend = messageToSend.slice(0, 1990) + "…";
-
+        // 發出訊息
         await channel.send({
             content: messageToSend,
             components: [row]
