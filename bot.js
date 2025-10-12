@@ -1,3 +1,4 @@
+// bot.js
 require("dotenv").config();
 const {
     Client, GatewayIntentBits, Partials,
@@ -28,7 +29,7 @@ function ensureServerConfig(guildId) {
             supportRole: null,
             ticketChannel: null,
             logChannel: null,
-            welcomeMessage: "📩 歡迎！請描述你的問題"
+            welcomeMessage: "您的票口已開啟，請在此描述問題。"
         };
     }
     return settingsDB[guildId];
@@ -90,27 +91,26 @@ client.on("interactionCreate", async interaction => {
             permissionOverwrites
         });
 
-        // 按鈕
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("claim_ticket").setLabel("🧾 接手工單").setStyle(ButtonStyle.Primary),
             new ButtonBuilder().setCustomId("close_ticket").setLabel("🔒 關閉工單").setStyle(ButtonStyle.Danger)
         );
 
-        // 訊息內容與 mentions
-        const welcomeMsg = config.welcomeMessage?.trim() || "📩 歡迎！請描述你的問題";
+        // 取得歡迎訊息（可包含換行）
+        const welcomeMsg = (config.welcomeMessage || "").trim() || "您的票口已開啟";
         const userMention = `<@${interaction.user.id}>`;
         const supportMention = supportRole ? `<@&${supportRole.id}>` : "";
-        const messageContent = `${userMention}\n${welcomeMsg}\n${supportMention}`;
 
-        await channel.send({
-            content: messageContent,
-            components: [row],
-            allowedMentions: {
-                users: [interaction.user.id],
-                roles: supportRole ? [supportRole.id] : []
-            }
-        });
+        // 排列順序：@開啟者（單獨一行） -> 歡迎訊息 -> @支援人員（單獨一行）
+        // 如果歡迎訊息本身已包含 mention，就不重複加 supportMention（但通常會單獨加）
+        const parts = [];
+        parts.push(userMention);           // @ 開啟者
+        parts.push(welcomeMsg);            // 歡迎訊息（多行可直接放）
+        if (supportMention) parts.push(supportMention); // @ 支援角色
 
+        const messageContent = parts.join("\n");
+
+        await channel.send({ content: messageContent, components: [row] });
         await interaction.reply({ content: `✅ 工單已建立：${channel}`, ephemeral: true });
     }
 
