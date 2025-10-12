@@ -1,4 +1,3 @@
-// server.js
 require("dotenv").config();
 const express = require("express");
 const path = require("path");
@@ -56,27 +55,25 @@ app.post("/api/servers/:id/settings", async (req, res) => {
         );
 
         const topText = (req.body.topText || "").toString().trim();
-        const welcomeMessage = (req.body.welcomeMessage || "").toString().trim();
 
-        // ✅ 是否要 ping 通知角色（由控制面板決定）
-        const shouldPingNotify = !!req.body.pingRole; // 前端若勾選「Ping 通知角色」會傳 true
-        const notifyRoleId = req.body.notifyRole; // 使用者在前端選的角色ID
-        const supportRoleId = req.body.supportRole; // 管理員角色ID（之後開票口用）
+        // ✅ 控制面板設定
+        const shouldPingNotify = req.body.shouldPingNotify === true;
+        const notifyRoleId = req.body.notifyRole;
 
         let messageToSend = "";
 
+        // ✅ 若有勾選並選擇角色 → mention
         if (shouldPingNotify && notifyRoleId) {
-            messageToSend += `<@&${notifyRoleId}>\n`; // ✅ ping 通知角色
+            messageToSend += `<@&${notifyRoleId}>\n`;
         }
 
-        // 按鈕上方文字
+        // ✅ 顯示按鈕上方文字（可多行）
         if (topText) {
-            messageToSend += `${topText}\n`;
+            messageToSend += `${topText}`;
         } else {
-            messageToSend += `**自創工單機器人**\n用途：提交建議、提出疑問\n`;
+            messageToSend += `📌 **票口使用說明**\n本票口供社群成員使用，適用於活動、私人溝通、或遇到任何困難。`;
         }
 
-        // 發出訊息
         await channel.send({
             content: messageToSend,
             components: [row]
