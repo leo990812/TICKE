@@ -1,24 +1,19 @@
+// settingsDB.js
 const fs = require('fs');
 const path = require('path');
 const filePath = path.join(__dirname, 'settings.json');
 
-let data = {};
-if (fs.existsSync(filePath)) {
-    try {
-        data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    } catch (e) {
-        data = {};
-    }
+// 初始化檔案
+if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, JSON.stringify({}, null, 4));
 }
+
+let data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
 const settingsDB = new Proxy(data, {
     set(target, key, value) {
         target[key] = value;
-        try {
-            fs.writeFileSync(filePath, JSON.stringify(target, null, 4));
-        } catch (err) {
-            console.error("儲存設定失敗:", err);
-        }
+        fs.writeFileSync(filePath, JSON.stringify(target, null, 4));
         return true;
     }
 });
