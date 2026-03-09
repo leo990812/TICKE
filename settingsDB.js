@@ -1,9 +1,7 @@
-// settingsDB.js
 const fs = require('fs');
 const path = require('path');
 const filePath = path.join(__dirname, 'settings.json');
 
-// 初始化檔案
 if (!fs.existsSync(filePath)) {
     fs.writeFileSync(filePath, JSON.stringify({}, null, 4));
 }
