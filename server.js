@@ -15,33 +15,30 @@ app.post("/api/servers/:id/settings", async (req, res) => {
         const guild = client.guilds.cache.get(guildId);
         if (!guild) return res.status(404).json({ error: "找不到伺服器" });
 
-        // 保存設定到 Proxy (確保資料完整存入 settings.json)
+        // 保存設定
         settingsDB[guildId] = req.body;
 
         const channel = guild.channels.cache.get(req.body.ticketChannel);
-        if (!channel) return res.status(404).json({ error: "找不到發送按鈕的頻道" });
+        if (!channel) return res.status(404).json({ error: "找不到按鈕發送頻道" });
 
         const buttonText = (req.body.buttonText || "🎫 開啟工單").toString().slice(0, 80);
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("create_ticket").setLabel(buttonText).setStyle(ButtonStyle.Primary)
         );
 
-        // --- 修正 PING 邏輯 ---
+        // --- 強制判定 Ping 邏輯 ---
         let finalMessage = "";
+        const pingEnabled = String(req.body.pingRole) === "true"; // 強制轉字串判斷
         
-        // 某些前端傳回來的勾選框可能是 "true" (字串) 或 true (布林)
-        const isPingEnabled = req.body.pingRole === true || req.body.pingRole === "true";
-        
-        if (isPingEnabled && req.body.notifyRole) {
-            finalMessage += `<@&${req.body.notifyRole}>\n`; // Ping 放在最上面
+        if (pingEnabled && req.body.notifyRole) {
+            finalMessage += `<@&${req.body.notifyRole}>\n`;
         }
-        
-        finalMessage += (req.body.topText || "📬 點擊下方按鈕以開啟私人工單");
+        finalMessage += (req.body.topText || "📬 點擊按鈕開啟工單");
 
         await channel.send({ content: finalMessage, components: [row] });
         res.json({ success: true });
     } catch (err) {
-        console.error("發送失敗:", err);
+        console.error("發送錯誤:", err);
         res.status(500).json({ error: "發送失敗" });
     }
 });
@@ -61,5 +58,4 @@ app.get("/api/servers/:id/info", (req, res) => {
     res.json({ channels, roles });
 });
 
-app.get("/", (req, res) => res.send("Online"));
 app.listen(process.env.PORT || 3000);
