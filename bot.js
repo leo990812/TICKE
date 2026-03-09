@@ -57,14 +57,10 @@ client.on("interactionCreate", async interaction => {
     const guildId = interaction.guild.id;
     const config = ensureServerConfig(guildId);
 
-    // 建立票口
     if (interaction.customId === "create_ticket") {
         let category = interaction.guild.channels.cache.find(c => c.type === 4 && c.name === TICKET_CATEGORY_NAME);
         if (!category) {
-            category = await interaction.guild.channels.create({
-                name: TICKET_CATEGORY_NAME,
-                type: 4
-            });
+            category = await interaction.guild.channels.create({ name: TICKET_CATEGORY_NAME, type: 4 });
         }
 
         const existing = interaction.guild.channels.cache.find(c => c.topic === `ticketOwner:${interaction.user.id}`);
@@ -93,23 +89,16 @@ client.on("interactionCreate", async interaction => {
         );
 
         const welcomeMsg = config.welcomeMessage?.trim() || "📩 您的票口已開啟";
-        const userMention = `<@${interaction.user.id}>`;
-        const supportMention = supportRole ? `<@&${supportRole.id}>` : "";
-
-        const messageContent = `${userMention}\n${welcomeMsg}\n${supportMention}`;
-
-        await channel.send({ content: messageContent, components: [row] });
+        await channel.send({ content: `<@${interaction.user.id}>\n${welcomeMsg}${supportRole ? `\n<@&${supportRole.id}>` : ""}`, components: [row] });
         await interaction.reply({ content: `✅ 工單已建立：${channel}`, ephemeral: true });
     }
 
-    // 接手工單
     if (interaction.customId === "claim_ticket") {
         const member = interaction.member;
         const isSupport = config.supportRole ? member.roles.cache.has(config.supportRole) : false;
         const isAdmin = member.permissions.has(PermissionFlagsBits.ManageChannels);
 
-        if (!isSupport && !isAdmin)
-            return interaction.reply({ content: "❌ 只有支援人員或管理員可接手工單。", ephemeral: true });
+        if (!isSupport && !isAdmin) return interaction.reply({ content: "❌ 只有支援人員或管理員可接手工單。", ephemeral: true });
 
         const msg = await interaction.channel.messages.fetch(interaction.message.id);
         const newRow = new ActionRowBuilder().addComponents(
@@ -117,47 +106,23 @@ client.on("interactionCreate", async interaction => {
             new ButtonBuilder().setCustomId("close_ticket").setLabel("🔒 關閉工單").setStyle(ButtonStyle.Danger)
         );
 
-        await msg.edit({
-            content: `📩 此工單已由 ${member} 接手，請耐心等候處理。`,
-            components: [newRow]
-        });
-
+        await msg.edit({ content: `📩 此工單已由 ${member} 接手，請耐心等候處理。`, components: [newRow] });
         await interaction.channel.setName(`工單-${interaction.channel.name.replace("工單-", "")}-處理中`);
         await interaction.reply({ content: `✅ 你已接手此工單。`, ephemeral: true });
     }
 
-    // 關閉工單確認
     if (interaction.customId === "close_ticket") {
         const confirmRow = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("confirm_close").setLabel("✅ 確定關閉").setStyle(ButtonStyle.Danger),
             new ButtonBuilder().setCustomId("cancel_close").setLabel("❌ 取消").setStyle(ButtonStyle.Secondary)
         );
-
-        return interaction.reply({
-            content: "⚠️ 你確定要關閉這張工單嗎？此操作將保存紀錄並刪除此頻道。",
-            components: [confirmRow],
-            ephemeral: true
-        });
+        return interaction.reply({ content: "⚠️ 你確定要關閉這張工單嗎？此操作將保存紀錄並刪除此頻道。", components: [confirmRow], ephemeral: true });
     }
 
-    // 取消關閉
-    if (interaction.customId === "cancel_close") {
-        return interaction.update({ content: "✅ 已取消關閉操作。", components: [] });
-    }
-
-    // 確認關閉
     if (interaction.customId === "confirm_close") {
         await interaction.update({ content: "📝 正在保存工單紀錄...", components: [] });
-
         const topic = interaction.channel.topic;
-        const ticketOwner = topic?.startsWith("ticketOwner:") ? topic.split(":")[1] : null;
-
-        const member = interaction.member;
-        const isSupport = config.supportRole ? member.roles.cache.has(config.supportRole) : false;
-        const isAdmin = member.permissions.has(PermissionFlagsBits.ManageChannels);
-
-        if (interaction.user.id !== ticketOwner && !isSupport && !isAdmin)
-            return interaction.followUp({ content: "❌ 你沒有權限關閉此工單。", ephemeral: true });
+        const ticketOwnerId = topic?.startsWith("ticketOwner:") ? topic.split(":")[1] : null;
 
         try {
             const messages = await fetchAllMessages(interaction.channel);
@@ -165,29 +130,34 @@ client.on("interactionCreate", async interaction => {
 
             const logDir = path.join(__dirname, "logs");
             if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
-
             const filePath = path.join(logDir, `${interaction.channel.name}.txt`);
             fs.writeFileSync(filePath, logs);
 
             const attachment = new AttachmentBuilder(filePath);
-            const logChannel = config.logChannel ? interaction.guild.channels.cache.get(config.logChannel) : null;
+            // 關鍵：從設定中讀取你在控制面板選好的 logChannel
+            const logChannelId = config.logChannel;
+            const logChannel = logChannelId ? interaction.guild.channels.cache.get(logChannelId) : null;
 
             if (logChannel) {
                 await logChannel.send({
-                    content: `🗂️ 工單 **${interaction.channel.name}** 已關閉，由 ${interaction.user} 關閉。`,
+                    content: `🗂️ 工單 **${interaction.channel.name}** 已關閉\n**關閉者：** ${interaction.user}\n**工單擁有者：** ${ticketOwnerId ? `<@${ticketOwnerId}>` : "未知"}`,
                     files: [attachment]
                 });
             }
 
-            await interaction.followUp({ content: "✅ 工單紀錄已保存並上傳，頻道將在 3 秒後刪除。", ephemeral: true });
+            await interaction.followUp({ content: "✅ 工單紀錄已發送至紀錄頻道，本頻道即將刪除。", ephemeral: true });
             setTimeout(() => interaction.channel.delete().catch(() => {}), 3000);
         } catch (err) {
-            console.error("❌ 保存紀錄錯誤：", err);
-            await interaction.followUp({ content: "⚠️ 無法保存紀錄，請查看主控台錯誤。", ephemeral: true });
+            console.error(err);
+            await interaction.followUp({ content: "⚠️ 紀錄保存失敗，但頻道仍會刪除。", ephemeral: true });
+            setTimeout(() => interaction.channel.delete().catch(() => {}), 3000);
         }
+    }
+
+    if (interaction.customId === "cancel_close") {
+        return interaction.update({ content: "✅ 已取消關閉。", components: [] });
     }
 });
 
-// 必須在 login 前匯出
 module.exports = client;
 client.login(process.env.DISCORD_TOKEN);
